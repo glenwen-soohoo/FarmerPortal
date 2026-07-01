@@ -10,10 +10,11 @@ import FailDialog from './FailDialog'
 interface Props {
   order: Order
   upcoming?: boolean
-  // 批次勾選模式（批次列印出貨單）
+  // 批次勾選模式（批次列印出貨單 / 批次黑貓收貨）
   selectable?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  selectDisabled?: boolean // 此模式下該單不可勾選（如批次收貨時的非已印單）
 }
 
 function windowText(o: Order) {
@@ -21,7 +22,7 @@ function windowText(o: Order) {
   return o.shippableDate ?? '—'
 }
 
-export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect }: Props) {
+export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect, selectDisabled }: Props) {
   const { printOrder, shipOrder, failOrder } = useStore()
   const [printing, setPrinting] = useState(false)
   const [printStep, setPrintStep] = useState<'preparing' | 'done'>('preparing')
@@ -32,6 +33,22 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
 
   const printed = order.shipStatus === '已印單'
   const shipped = order.shipStatus === '已出貨'
+  const needsReprint = order.shipStatus === '改單待重印' || !!order.isUpdated
+
+  // 卡片底色 / 邊框：批次選中(綠) > 改單待重印(琥珀底+粗邊) > 一般
+  let cardBg = '#fff'
+  let cardBorderColor = '#E5E1D8'
+  let cardBorderW = 1
+  if (selectable && selected) {
+    cardBg = '#EAF3EC'
+    cardBorderColor = '#1F6E43'
+    cardBorderW = 2
+  } else if (needsReprint) {
+    cardBg = '#FDF3E0'
+    cardBorderColor = '#D99A2B'
+    cardBorderW = 2
+  }
+  const dimmed = selectable && selectDisabled
 
   const doPrint = () => {
     setAskReprint(false)
@@ -49,24 +66,23 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
     <div
       className="flex items-stretch gap-4 rounded-card p-5"
       style={{
-        background: selectable && selected ? '#EAF3EC' : '#fff',
-        border: `${selectable && selected ? 2 : 1}px solid ${
-          selectable && selected ? '#1F6E43' : order.isUpdated ? '#D99A2B' : '#E5E1D8'
-        }`,
+        background: cardBg,
+        border: `${cardBorderW}px solid ${cardBorderColor}`,
         boxShadow: '0 1px 3px rgba(43,43,38,0.06)',
+        opacity: dimmed ? 0.45 : 1,
       }}
     >
       {/* 左：訂單資訊（點擊展開）。順序依「對農友的重要性」：產品 → 預計出貨 → 收件人 → 出貨提醒 */}
       <div className="min-w-0 flex-1">
-        {order.isUpdated && (
-          <div className="mb-3 inline-block rounded px-3 py-1 font-bold text-white" style={{ background: '#D99A2B' }}>
+        {needsReprint && (
+          <div className="mb-3 inline-block rounded px-3 py-1 text-lg font-bold text-white" style={{ background: '#D99A2B' }}>
             已更新，請重印
           </div>
         )}
 
         <div
-          className={selectable ? 'w-full cursor-pointer text-left' : 'w-full text-left'}
-          onClick={selectable ? () => onToggleSelect?.() : undefined}
+          className={selectable && !selectDisabled ? 'w-full cursor-pointer text-left' : 'w-full text-left'}
+          onClick={selectable && !selectDisabled ? () => onToggleSelect?.() : undefined}
         >
           {/* 1. 產品 / 規格 / 溫層（主角，字最大） */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -154,10 +170,11 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
         </div>
       )}
 
-      {/* 批次模式：右上大勾選框 */}
+      {/* 批次模式：右上大勾選框（此模式不可選的單顯示禁用） */}
       {selectable && (
         <button
-          onClick={onToggleSelect}
+          onClick={selectDisabled ? undefined : onToggleSelect}
+          disabled={selectDisabled}
           aria-label="勾選此訂單"
           className="flex shrink-0 items-center justify-center self-start rounded"
           style={{
@@ -165,6 +182,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             height: 40,
             border: `2px solid ${selected ? '#1F6E43' : '#B9B6AC'}`,
             background: selected ? '#1F6E43' : '#fff',
+            cursor: selectDisabled ? 'not-allowed' : 'pointer',
           }}
         >
           {selected && <span className="text-2xl font-bold text-white">✓</span>}
