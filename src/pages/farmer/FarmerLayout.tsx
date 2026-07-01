@@ -2,10 +2,13 @@ import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import SegmentedNav from '../../components/SegmentedNav'
 import { useStore } from '../../store'
+import DevPanel from '../../dev/DevPanel'
+import { DEFAULT_DEV_TODAY, isInShippablePage, isInUpcomingPage } from '../../utils/shipDate'
 
-// 給子頁（Shippable 等）用來鎖住上方分頁（批次列印模式）
+// 給子頁（Shippable 等）用：鎖住上方分頁（批次列印模式）、以及開發用測試日期
 export interface FarmerOutletCtx {
   setNavLocked: (v: boolean) => void
+  today: string // 'YYYY-MM-DD' 測試日期
 }
 
 export default function FarmerLayout() {
@@ -14,11 +17,12 @@ export default function FarmerLayout() {
   const navigate = useNavigate()
   const me = farmers.find((f) => f.id === currentFarmerId)
   const [navLocked, setNavLocked] = useState(false)
+  const [today, setToday] = useState(DEFAULT_DEV_TODAY)
 
   const mine = orders.filter((o) => o.farmerId === currentFarmerId)
-  // 可出貨頁含「可出貨（未印）＋ 已印單（待黑貓收貨）」
-  const shippableCount = mine.filter((o) => o.shipStatus === '可出貨' || o.shipStatus === '已印單').length
-  const upcomingCount = mine.filter((o) => o.shipStatus === '未達出貨時間').length
+  // 依測試日期分桶（可出貨 / 出貨預告都由日期決定）
+  const shippableCount = mine.filter((o) => isInShippablePage(o, today)).length
+  const upcomingCount = mine.filter((o) => isInUpcomingPage(o, today)).length
 
   const TABS = ['/farmer/shippable', '/farmer/upcoming', '/farmer/history', '/farmer/all']
   const isMain = TABS.includes(loc.pathname)
@@ -49,8 +53,11 @@ export default function FarmerLayout() {
       )}
 
       <main className="flex-1 overflow-auto bg-cream p-4">
-        <Outlet context={{ setNavLocked } satisfies FarmerOutletCtx} />
+        <Outlet context={{ setNavLocked, today } satisfies FarmerOutletCtx} />
       </main>
+
+      {/* 開發用：切換測試日期，驗證可出貨/出貨預告是否依日期正確切換 */}
+      <DevPanel today={today} onChange={setToday} shippableCount={shippableCount} upcomingCount={upcomingCount} />
     </div>
   )
 }

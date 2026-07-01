@@ -6,17 +6,16 @@ import BigButton from '../../components/BigButton'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import { EmptyState } from '../../components/States'
 import { useListFilter } from '../../components/ListFilter'
+import { isInShippablePage } from '../../utils/shipDate'
 import type { FarmerOutletCtx } from './FarmerLayout'
 
 export default function Shippable() {
   const { orders, currentFarmerId, printOrder } = useStore()
-  const { setNavLocked } = useOutletContext<FarmerOutletCtx>()
+  const { setNavLocked, today } = useOutletContext<FarmerOutletCtx>()
 
-  // 可出貨（未印）＋ 已印單（印了單、等黑貓收貨）都留在此頁；黑貓收貨後才進「出貨紀錄」
+  // 依測試日期分桶：已印單/改單待重印固定在此頁；可出貨(原始)須「已達出貨起始日」才留在此頁，否則落到出貨預告
   const list = sortShippable(
-    orders.filter(
-      (o) => o.farmerId === currentFarmerId && (o.shipStatus === '可出貨' || o.shipStatus === '已印單')
-    )
+    orders.filter((o) => o.farmerId === currentFarmerId && isInShippablePage(o, today))
   )
   const { filtered, filterButton, filterPanel, activeCount } = useListFilter(list)
 

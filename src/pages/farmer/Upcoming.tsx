@@ -1,11 +1,16 @@
+import { useOutletContext } from 'react-router-dom'
 import { useStore } from '../../store'
 import OrderCard from '../../components/OrderCard'
 import { EmptyState } from '../../components/States'
 import { useListFilter } from '../../components/ListFilter'
+import { isInUpcomingPage } from '../../utils/shipDate'
+import type { FarmerOutletCtx } from './FarmerLayout'
 
 export default function Upcoming() {
   const { orders, currentFarmerId } = useStore()
-  const list = orders.filter((o) => o.farmerId === currentFarmerId && o.shipStatus === '未達出貨時間')
+  const { today } = useOutletContext<FarmerOutletCtx>()
+  // 依測試日期分桶：尚未達出貨起始日的單落在此頁
+  const list = orders.filter((o) => o.farmerId === currentFarmerId && isInUpcomingPage(o, today))
   const { filtered, filterButton, filterPanel } = useListFilter(list)
 
   return (
