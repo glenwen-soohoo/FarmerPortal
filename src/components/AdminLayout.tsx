@@ -4,7 +4,7 @@ import '../gox/gox.css'
 
 const MENU = [
   { to: '/admin/dashboard', label: '派單總覽' },
-  { to: '/admin/binding', label: '商品綁定' },
+  { to: '/admin/binding', label: '商品綁定(待討論)' },
   { to: '/admin/accounts', label: '農友帳號管理' },
 ]
 
