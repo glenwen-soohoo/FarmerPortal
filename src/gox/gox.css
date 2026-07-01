@@ -1,0 +1,175 @@
+/* ===== GoX Admin 樣式（搬自團隊 skill「套後台樣式-GoX」權威來源，原封不改值）=====
+   來源：D:/Obsidian/AILibrary/線上研發部/Skills/套後台樣式-GoX/程式碼與樣式/
+   base.css + admin-header.css + admin-sidebar.css + admin-content.css
+   差異：移除全域 body{} / 裸 a{}（避免污染農友端），改由 .gox-page 承載。 */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  /* 品牌綠 */
+  --gox-green:           #4ba83b;
+  --gox-green-hover:     #3d8c30;
+  --gox-header-bg:       #D7F4DA;
+  --gox-header-border:   #c2dfc4;
+  /* 側欄深灰 */
+  --gox-sider-bg:        #32323a;
+  --gox-sider-sub-bg:    #28282e;
+  --gox-sider-active-bg: #202025;
+  --gox-sider-text:      #fff;
+  --gox-sider-sub-text:  #cccccc;
+  --gox-sider-active-text: bisque;
+  /* 內容區 */
+  --gox-content-bg:      #f1f2f7;
+  --gox-card-bg:         #ffffff;
+  --gox-card-border:     #e6e6e6;
+  /* 文字 */
+  --gox-text:            #333333;
+  --gox-text-sub:        #666666;
+  --gox-text-muted:      #888888;
+  /* 語意色 */
+  --gox-danger:          #dc4e43;
+  --gox-danger-soft:     #ff4d4f;
+  --gox-warning:         #fbbf24;
+  --gox-info:            #2c98f0;
+  --gox-success:         #52c41a;
+  /* 尺寸 */
+  --gox-header-h:        49px;
+  --gox-sider-w:         160px;
+  --gox-radius:          4px;
+  --gox-radius-lg:       6px;
+  --gox-space-unit:      4px;
+  /* 字型 */
+  --gox-font-family:     'Noto Sans TC', 'Microsoft JhengHei', '微軟正黑體', -apple-system, BlinkMacSystemFont, sans-serif;
+  --gox-font-size-base:  14px;
+  --gox-font-size-sm:    13px;
+  --gox-font-size-xs:    12px;
+}
+
+.gox-page {
+  min-height: 100vh;
+  background: var(--gox-content-bg);
+  color: var(--gox-text);
+  font-family: var(--gox-font-family);
+  font-size: var(--gox-font-size-base);
+}
+.gox-page a { color: var(--gox-info); text-decoration: none; }
+.gox-page a:hover { text-decoration: underline; }
+
+/* ── header ── */
+.gox-header {
+  position: sticky; top: 0; z-index: 100;
+  height: var(--gox-header-h);
+  background: var(--gox-header-bg);
+  border-bottom: 1px solid var(--gox-header-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+  display: flex; align-items: center; padding: 0 20px; gap: 20px;
+  font-family: var(--gox-font-family);
+}
+.gox-header .gox-logo { display: inline-flex; align-items: center; flex-shrink: 0; font-weight: 700; color: #2b6b1f; }
+.gox-breadcrumb { display: flex; align-items: center; gap: 8px; color: var(--gox-text-sub); font-size: 15px; flex: 1; min-width: 0; }
+.gox-breadcrumb a { color: var(--gox-green); }
+.gox-breadcrumb .sep { color: var(--gox-text-muted); font-size: 12px; }
+.gox-breadcrumb strong { color: #000; font-weight: 700; }
+.gox-header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; font-size: var(--gox-font-size-sm); }
+.gox-header-right .gox-user { color: var(--gox-text); white-space: nowrap; }
+.gox-header-right .gox-icon-btn {
+  background: transparent; border: 0; cursor: pointer; color: var(--gox-text-sub);
+  padding: 4px 8px; font-family: inherit; font-size: inherit;
+  display: inline-flex; align-items: center; gap: 4px; border-radius: var(--gox-radius); white-space: nowrap;
+}
+.gox-header-right .gox-icon-btn:hover { background: rgba(0,0,0,.05); color: var(--gox-text); }
+
+/* ── sidebar ── */
+.gox-sidebar {
+  width: var(--gox-sider-w); flex-shrink: 0;
+  background: var(--gox-sider-bg); color: var(--gox-sider-text);
+  padding: 8px 0; font-size: var(--gox-font-size-sm);
+  overflow-y: auto; position: sticky; top: var(--gox-header-h);
+  height: calc(100vh - var(--gox-header-h)); font-family: var(--gox-font-family);
+}
+.gox-sidebar .gox-menu-item, .gox-sidebar .gox-menu-title {
+  display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+  color: var(--gox-sider-text); background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer; font-size: var(--gox-font-size-sm);
+  font-family: inherit; line-height: 1.5; user-select: none; text-decoration: none;
+}
+.gox-sidebar .gox-menu-item:hover, .gox-sidebar .gox-menu-title:hover { background: var(--gox-sider-sub-bg); color: var(--gox-sider-active-text); text-decoration: none; }
+.gox-sidebar .gox-menu-item.is-active { background: var(--gox-sider-active-bg); color: var(--gox-sider-active-text); font-weight: 600; }
+.gox-sidebar .gox-menu-item.is-disabled { cursor: default; color: #888; }
+.gox-sidebar .gox-menu-item.is-disabled:hover { background: transparent; color: #888; }
+.gox-sidebar .gox-arrow { display: inline-block; width: 12px; font-size: 9px; flex-shrink: 0; transition: transform .15s; }
+.gox-sidebar .gox-badge { margin-left: auto; background: var(--gox-danger); color: #fff; border-radius: 10px; padding: 0 6px; font-size: 11px; min-width: 16px; text-align: center; line-height: 16px; }
+.gox-sidebar .gox-menu-group.is-open .gox-menu-title { background: var(--gox-sider-sub-bg); color: var(--gox-sider-active-text); }
+.gox-sidebar .gox-menu-children { background: var(--gox-sider-sub-bg); }
+.gox-sidebar .gox-menu-child { display: block; padding: 8px 14px 8px 32px; color: var(--gox-sider-sub-text); text-decoration: none; font-size: var(--gox-font-size-sm); }
+.gox-sidebar .gox-menu-child:hover { background: #252530; color: var(--gox-sider-active-text); text-decoration: none; }
+.gox-sidebar .gox-menu-child.is-active { background: var(--gox-sider-active-bg); color: var(--gox-sider-active-text); font-weight: 600; }
+
+/* ── body / content ── */
+.gox-body { display: flex; min-height: calc(100vh - var(--gox-header-h)); }
+.gox-content { flex: 1; min-width: 0; padding: 16px; overflow-x: auto; background: var(--gox-content-bg); }
+.gox-toolbox { max-width: 960px; margin: 0 auto; width: 100%; }
+.gox-toolbox.is-narrow { max-width: 720px; }
+.gox-toolbox.is-wide { max-width: 1200px; }
+.gox-toolbox.is-fluid { max-width: none; }
+
+/* ── card ── */
+.gox-card { background: var(--gox-card-bg); border: 1px solid var(--gox-card-border); border-radius: var(--gox-radius-lg); margin-bottom: 16px; overflow: hidden; }
+.gox-card-title { margin: 0; padding: 12px 16px; background: var(--gox-card-bg); border-bottom: 1px solid var(--gox-card-border); font-size: 16px; font-weight: 600; color: var(--gox-text); }
+.gox-card-title.is-green { background: var(--gox-green); color: #fff; border-bottom: 0; }
+.gox-card-body { padding: 16px; }
+.gox-card-body.is-table-padding { padding: 0; }
+.gox-list-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+
+/* ── button ── */
+.gox-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 16px; border-radius: var(--gox-radius); font-size: var(--gox-font-size-base); font-family: inherit; cursor: pointer; border: 1px solid transparent; line-height: 1.5; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; }
+.gox-btn:disabled { opacity: .5; cursor: not-allowed; }
+.gox-btn-primary { background: var(--gox-green); color: #fff; border-color: var(--gox-green); }
+.gox-btn-primary:hover:not(:disabled) { background: var(--gox-green-hover); border-color: var(--gox-green-hover); }
+.gox-btn-default { background: #fff; color: var(--gox-text); border-color: #ccc; }
+.gox-btn-default:hover:not(:disabled) { background: #f5f5f5; border-color: var(--gox-green); color: var(--gox-green); }
+.gox-btn-danger { background: #fff; color: var(--gox-danger); border-color: var(--gox-danger); }
+.gox-btn-danger:hover:not(:disabled) { background: var(--gox-danger); color: #fff; }
+.gox-btn-op { display: inline-block; margin-right: 4px; padding: 4px 10px; background: #fff; border: 1px solid #ccc; border-radius: var(--gox-radius); font-size: var(--gox-font-size-xs); color: var(--gox-text); cursor: pointer; font-family: inherit; text-decoration: none; }
+.gox-btn-op:hover { background: #f5f5f5; text-decoration: none; }
+
+/* ── form ── */
+.gox-form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.gox-form-row > label { min-width: 110px; color: var(--gox-text); font-weight: 500; }
+.gox-input, .gox-select, .gox-textarea { padding: 6px 10px; border: 1px solid #ccc; border-radius: var(--gox-radius); font-size: var(--gox-font-size-base); font-family: inherit; background: #fff; color: var(--gox-text); line-height: 1.5; min-height: 32px; box-sizing: border-box; }
+.gox-input:focus, .gox-select:focus, .gox-textarea:focus { outline: 2px solid var(--gox-green); outline-offset: -1px; border-color: var(--gox-green); }
+.gox-hint { color: var(--gox-text-muted); font-size: var(--gox-font-size-xs); }
+
+/* ── table ── */
+.gox-table { width: 100%; border-collapse: collapse; font-size: var(--gox-font-size-sm); background: #fff; }
+.gox-table th { background: #fafafa; border-bottom: 1px solid var(--gox-card-border); padding: 10px 8px; text-align: left; font-weight: 600; color: var(--gox-text-sub); white-space: nowrap; }
+.gox-table td { padding: 12px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+.gox-table tr:hover td { background: #fafafa; }
+.gox-table .cell-center { text-align: center; }
+.gox-table .cell-right { text-align: right; }
+.gox-table .cell-ops { white-space: nowrap; }
+.gox-table .row-error td { background: #fff1f0; }
+
+/* ── tab ── */
+.gox-tab-group { display: inline-flex; border: 1px solid #ccc; border-radius: var(--gox-radius); overflow: hidden; }
+.gox-tab-btn { padding: 6px 20px; background: #fff; border: 0; cursor: pointer; font-size: var(--gox-font-size-base); font-family: inherit; border-right: 1px solid #ccc; color: var(--gox-text); }
+.gox-tab-btn:last-child { border-right: 0; }
+.gox-tab-btn.is-active { background: var(--gox-info); color: #fff; }
+
+/* ── switch / tag ── */
+.gox-switch { position: relative; display: inline-block; width: 40px; height: 22px; border-radius: 11px; border: 0; padding: 0; margin: 0; background: #d1d5db; cursor: pointer; transition: background .18s ease; vertical-align: middle; }
+.gox-switch.is-on { background: var(--gox-green); }
+.gox-switch.is-disabled { opacity: .5; cursor: not-allowed; }
+.gox-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .18s ease; }
+.gox-switch.is-on::after { transform: translateX(18px); }
+.gox-tag { display: inline-block; padding: 2px 8px; border-radius: var(--gox-radius); font-size: var(--gox-font-size-xs); font-weight: 600; background: #f0f0f0; color: var(--gox-text-sub); border: 1px solid #e0e0e0; white-space: nowrap; }
+.gox-tag.is-success { background: #f6ffed; color: #389e0d; border-color: #b7eb8f; }
+.gox-tag.is-info { background: #e6f4ff; color: #0958d9; border-color: #91caff; }
+.gox-tag.is-warning { background: #fffbe6; color: #d4b106; border-color: #ffe58f; }
+.gox-tag.is-danger { background: #fff1f0; color: var(--gox-danger); border-color: #ffccc7; }
+.gox-tag.is-frozen { background: #e6f4ff; color: #0958d9; border-color: #91caff; }
+.gox-tag.is-ambient { background: #f6ffed; color: #389e0d; border-color: #b7eb8f; }
+
+/* ── icon button ── */
+.gox-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; background: transparent; border: 1px solid transparent; border-radius: var(--gox-radius); cursor: pointer; color: var(--gox-text-sub); font-size: 12px; font-family: inherit; transition: all .15s; }
+.gox-icon-btn:hover { background: #f0f4f8; color: var(--gox-info); border-color: #bcd4ea; }

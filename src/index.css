@@ -1,0 +1,45 @@
+/* Noto Sans TC 以本機字型為主（避免 preview 連外網卡住）；缺字時 fallback 系統無襯線。 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 後台 GoX CSS 變數（對齊 FlatLab/Bucket 主題） */
+  --admin-primary: #1FB5AD; /* GoX teal 點綴 */
+  --admin-header: #D7F4DA; /* 淡薄荷綠 header */
+  --admin-sidebar: #32323A; /* 深炭灰側欄 */
+  --admin-sidebar-active: #28282E;
+  --admin-content-bg: #F1F2F7; /* 內容區底 */
+  --admin-success: #67c23a;
+  --admin-warning: #e6a23c;
+  --admin-danger: #f56c6c;
+  --admin-text: #303133;
+  --admin-border: #dcdfe6;
+  --admin-radius: 4px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Noto Sans TC', sans-serif;
+  color: #2b2b26;
+  background: #f7f6f2;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 農友端基礎字級 18px */
+.farmer-scope {
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+/* 後台基礎字級 14px */
+.admin-scope {
+  font-size: 14px;
+  line-height: 1.5;
+}
