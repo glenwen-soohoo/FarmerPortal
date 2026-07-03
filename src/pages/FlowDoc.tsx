@@ -93,7 +93,7 @@ export default function FlowDoc() {
             <Node label="可出貨" tone="green" />
             <Arrow label="農友印單" />
             <Node label="已印單" tone="coffee" />
-            <Arrow label="黑貓收貨" />
+            <Arrow label="系統偵測黑貓收貨" />
             <Node label="已出貨" tone="greenDeep" />
             <Arrow label="配達" />
             <Node label="已到貨" tone="greenDeep" />

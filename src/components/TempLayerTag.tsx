@@ -1,16 +1,15 @@
 import type { TempLayer } from '../types'
 
-const MAP: Record<TempLayer, string> = {
-  常溫: '#8A877C',
-  冷藏: '#2C7A9E',
-  冷凍: '#1F5E86',
+// 只用有顏色的文字：常溫=綠、冷藏=藍、冷凍=深藍（無框、無底色）
+const COLOR: Record<TempLayer, string> = {
+  常溫: '#389e0d',
+  冷藏: '#0958d9',
+  冷凍: '#1d39c4',
 }
 
-// 標籤感（小圓點 + 文字），不要做成像按鈕的外框膠囊
 export default function TempLayerTag({ layer }: { layer: TempLayer }) {
   return (
-    <span className="inline-flex items-center gap-1 text-base font-medium whitespace-nowrap" style={{ color: MAP[layer] }}>
-      <span className="inline-block rounded-full" style={{ width: 8, height: 8, background: MAP[layer] }} />
+    <span className="whitespace-nowrap font-medium" style={{ color: COLOR[layer] }}>
       {layer}
     </span>
   )

@@ -48,8 +48,11 @@ export interface Order {
   shipWindow?: [string, string] // 預定出貨區間 [起, 迄]（訂單本身可出貨日期）
   shippableDate?: string // 農友端顯示用（區間起日；沿用）
   blockedDates?: string[] // 不可出貨日（AI 判定，可複數：單日 "06/07" 或區間 "06/07–06/11"）
+  forcedShipDate?: string // 強制指定出貨日（客人指定，MM/DD）
+  remoteAgentCode?: string // 偏遠地區客代
   isUpdated?: boolean
   printedAt?: string
+  trackingNos?: string[] // 黑貓物流單號（跟黑貓要號後才有；補單可多筆）
   isWeekendPref?: boolean
   isWeekdayPref?: boolean
   failReason?: string
@@ -63,6 +66,7 @@ export interface Farmer {
   phone: string
   status: '未開通' | '已開通' | '已停用'
   lastLogin?: string
+  earlyShip?: boolean // 提早出貨資格：可在未達出貨時間時提早印單
   // 詳細資料（Farmer 主檔，master 在 Enzo，唯讀）
   brand?: string
   origin?: string // 產地

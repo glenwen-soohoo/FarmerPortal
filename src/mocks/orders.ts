@@ -9,18 +9,17 @@ export const seedOrders: Order[] = [
     id: '1', orderNumber: '260525841001', farmerId: 1,
     recipient: '王小明', phone: '0912000001', address: '台北市內湖區康寧路三段190巷35號8樓',
     productName: '玉荷包荔枝', variety: '玉荷包荔枝', spec: '1盒(5斤裝)', qty: 2, tempLayer: '冷藏',
-    rawRemark: '6/7-6/11不收貨 (管理員代收)', cleanRemark: '6/7–6/11 不可收貨',
+    rawRemark: '6/7-6/11不收貨，請於6/12出貨 (管理員代收)', cleanRemark: '6/7–6/11 不可收貨；指定 6/12 出貨',
     judgeStatus: 'AI判定完成', shipStatus: '可出貨',
-    shipWindow: ['06/05', '06/18'], shippableDate: '06/05', blockedDates: ['06/07–06/11'],
+    shipWindow: ['06/05', '06/18'], shippableDate: '06/05', blockedDates: ['06/07–06/11'], forcedShipDate: '06/12',
   },
   {
     id: '2', orderNumber: '260525841002', farmerId: 1,
     recipient: '陳美玲', phone: '0912000002', address: '高雄市前鎮區管仲南路402號15樓',
     productName: '玉荷包荔枝', variety: '玉荷包荔枝', spec: '1盒(3斤裝)', qty: 1, tempLayer: '冷藏',
-    rawRemark: '請一到四出貨，假日不收貨。6/5後出貨', cleanRemark: '僅週一至週四可出貨；假日不收貨',
+    rawRemark: '客人指定6/12出貨', cleanRemark: '指定 6/12 出貨',
     judgeStatus: 'AI判定完成', shipStatus: '可出貨',
-    shipWindow: ['06/05', '06/18'], shippableDate: '06/05', blockedDates: ['06/06–06/07', '06/13–06/14'],
-    isWeekdayPref: true,
+    shipWindow: ['06/05', '06/18'], shippableDate: '06/05', forcedShipDate: '06/12',
   },
   {
     id: '3', orderNumber: '260525841003', farmerId: 1,
@@ -38,6 +37,7 @@ export const seedOrders: Order[] = [
     rawRemark: '6/5後出貨', cleanRemark: '6/5 後出貨',
     judgeStatus: 'AI判定完成', shipStatus: '已印單',
     shipWindow: ['06/05', '06/18'], shippableDate: '06/05', printedAt: '2026-06-05 09:12',
+    trackingNos: ['900112233445'],
   },
   {
     id: '5', orderNumber: '260525841005', farmerId: 1,
@@ -57,11 +57,11 @@ export const seedOrders: Order[] = [
   },
   {
     id: '7', orderNumber: '260526841007', farmerId: 1,
-    recipient: '劉冠廷', phone: '0912000007', address: '花蓮縣花蓮市國富二十一街28號',
+    recipient: '劉冠廷', phone: '0912000007', address: '花蓮縣秀林鄉富世村天祥路120號',
     productName: '百香果', variety: '百香果', spec: '1箱(大果4斤裝)', qty: 1, tempLayer: '常溫',
     rawRemark: '6/20後再寄出', cleanRemark: '6/20 後才可出貨',
     judgeStatus: 'AI判定完成', shipStatus: '未達出貨時間',
-    shipWindow: ['06/20', '07/03'], shippableDate: '06/20',
+    shipWindow: ['06/20', '07/03'], shippableDate: '06/20', remoteAgentCode: 'F03（花蓮秀林）',
   },
   {
     id: '8', orderNumber: '260526841008', farmerId: 1,
@@ -78,6 +78,7 @@ export const seedOrders: Order[] = [
     rawRemark: '', cleanRemark: '',
     judgeStatus: 'AI判定完成', shipStatus: '已出貨',
     shipWindow: ['06/01', '06/14'], shippableDate: '06/03', printedAt: '2026-06-03 08:40',
+    trackingNos: ['900556677889'],
   },
   {
     id: '10', orderNumber: '260609851010', farmerId: 1,
@@ -105,11 +106,11 @@ export const seedOrders: Order[] = [
   },
   {
     id: '13', orderNumber: '260701852013', farmerId: 1,
-    recipient: '簡育誠', phone: '0912000013', address: '南投縣埔里鎮中山路三段120號',
+    recipient: '簡育誠', phone: '0912000013', address: '南投縣仁愛鄉大同村廬山路50號',
     productName: '夏雪芒果', variety: '夏雪芒果', spec: '1盒(精品大果)', qty: 1, tempLayer: '冷藏',
     rawRemark: '中秋前後看情況，盡量早點但不要太早，家裡有人再說', cleanRemark: '',
     judgeStatus: 'AI判定完成(低信心)', shipStatus: '可出貨',
-    shipWindow: ['06/14', '06/27'], shippableDate: '06/14',
+    shipWindow: ['06/14', '06/27'], shippableDate: '06/14', remoteAgentCode: 'N02（南投仁愛）',
   },
   {
     id: '14', orderNumber: '260701852014', farmerId: 1,
@@ -142,6 +143,7 @@ export const seedOrders: Order[] = [
     rawRemark: '', cleanRemark: '',
     judgeStatus: '人工修正判定', shipStatus: '已到貨',
     shipWindow: ['06/01', '06/14'], shippableDate: '06/02', printedAt: '2026-06-02 10:20',
+    trackingNos: ['900001112223'],
   },
 
   // ── 農友 2：蔣蔣果園 ──
@@ -157,9 +159,9 @@ export const seedOrders: Order[] = [
     id: '19', orderNumber: '260610862019', farmerId: 2,
     recipient: '鍾佳蓉', phone: '0913000019', address: '新北市新莊區中正路100號8樓',
     productName: '玉荷包荔枝', variety: '玉荷包荔枝', spec: '1盒(5斤裝)', qty: 2, tempLayer: '冷藏',
-    rawRemark: '6/12之後再出', cleanRemark: '6/12 後出貨',
+    rawRemark: '客人指定6/12出貨', cleanRemark: '指定 6/12 出貨',
     judgeStatus: 'AI判定完成', shipStatus: '可出貨',
-    shipWindow: ['06/12', '06/25'], shippableDate: '06/12',
+    shipWindow: ['06/12', '06/25'], shippableDate: '06/12', forcedShipDate: '06/12',
   },
 
   // ── 農友 3：蕭家黑葉荔枝園 ──
@@ -196,6 +198,7 @@ export const seedOrders: Order[] = [
     rawRemark: '', cleanRemark: '',
     judgeStatus: 'AI判定完成', shipStatus: '已印單',
     shipWindow: ['06/14', '06/27'], shippableDate: '06/14', printedAt: '2026-06-14 08:55',
+    trackingNos: ['900778899001', '900778899002'],
   },
 
   // ── 農友 5：吉食百香果園 ──
@@ -223,7 +226,7 @@ export const seedOrders: Order[] = [
     productName: '玉荷包荔枝', variety: '玉荷包荔枝', spec: '1盒(5斤裝)', qty: 1, tempLayer: '冷藏',
     rawRemark: '6/15-6/17 我出差不在，其他天都可以', cleanRemark: '6/15–6/17 不可收貨，其餘可',
     judgeStatus: 'AI判定完成', shipStatus: '可出貨',
-    shipWindow: ['06/12', '06/25'], shippableDate: '06/12', blockedDates: ['06/15–06/17'],
+    shipWindow: ['06/12', '06/25'], shippableDate: '06/12', blockedDates: ['06/15–06/17'], forcedShipDate: '06/13',
   },
   {
     id: '27', orderNumber: '260614864027', farmerId: 4,
@@ -242,3 +245,11 @@ export const seedOrders: Order[] = [
     shipWindow: ['06/16', '06/29'], shippableDate: '06/16', blockedDates: ['06/19–06/22'],
   },
 ]
+
+// 「可出貨」代表第一次進可出貨時已跟黑貓取號 → 一律要有物流編號。
+// 沒手動帶號的可出貨單，自動補一個示範號（未來新增也會涵蓋）。
+seedOrders.forEach((o) => {
+  if (o.shipStatus === '可出貨' && (!o.trackingNos || o.trackingNos.length === 0)) {
+    o.trackingNos = [`9007${o.id.padStart(3, '0')}5678`]
+  }
+})

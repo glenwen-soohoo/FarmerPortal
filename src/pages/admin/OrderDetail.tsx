@@ -11,6 +11,7 @@ const SHIP_OPTIONS: ShipStatus[] = [
 ]
 const FIELD_LABEL: Record<string, string> = {
   variety: '清洗品種名', shipWindow: '預定出貨區間', blockedDates: '不可出貨日',
+  forcedShipDate: '指定出貨日', remoteAgentCode: '偏遠客代',
   cleanRemark: '給農友備註', rawRemark: '原始主單備註', shipStatus: '出貨狀態', judgeStatus: '判定狀態',
 }
 
@@ -55,6 +56,7 @@ export default function OrderDetail() {
   const [blocked, setBlocked] = useState<BItem[]>(parseBlocked(o?.blockedDates))
   const [note, setNote] = useState(o?.cleanRemark ?? '')
   const [shipStatus, setShipStatus] = useState<ShipStatus>(o?.shipStatus ?? '未達出貨時間')
+  const [forcedShip, setForcedShip] = useState(toISO(o?.forcedShipDate))
   const [err, setErr] = useState('')
   const [saved, setSaved] = useState(false)
 
@@ -82,7 +84,13 @@ export default function OrderDetail() {
     const badRange = blocked.find((it) => it.kind === 'range' && it.a && it.b && it.a > it.b)
     if (badRange) { setErr('不可出貨日區間：起日不可晚於迄日'); return }
     setErr('')
-    const patch: Partial<Order> = { variety, cleanRemark: note, blockedDates: serializeBlocked(blocked), shipStatus }
+    const patch: Partial<Order> = {
+      variety,
+      cleanRemark: note,
+      blockedDates: serializeBlocked(blocked),
+      shipStatus,
+      forcedShipDate: forcedShip ? fromISO(forcedShip) : '',
+    }
     if (winFrom && winTo) patch.shipWindow = [fromISO(winFrom), fromISO(winTo)]
     manualEdit(o.id, patch, '營運人員')
     setSaved(true)
@@ -110,15 +118,41 @@ export default function OrderDetail() {
         <div className="gox-card">
           <div className="gox-card-title">訂單資訊 · {o.orderNumber}</div>
           <div className="gox-card-body">
+            <Field
+              label="物流單號"
+              value={
+                o.trackingNos?.length
+                  ? <div>{o.trackingNos.map((t, i) => <div key={i}>{t}</div>)}</div>
+                  : <span style={{ color: 'var(--gox-text-muted)' }}>尚無物流編號</span>
+              }
+            />
             <Field label="判定狀態" value={<StatusBadge status={o.judgeStatus} />} />
             <Field label="出貨狀態" value={<StatusBadge status={o.shipStatus} />} />
             <Field label="收件人" value={`${o.recipient}　${o.phone}`} />
-            <Field label="收件地址" value={o.address} />
+            <Field
+              label="收件地址"
+              value={
+                <span>
+                  {o.address}
+                  {o.remoteAgentCode && (
+                    <span className="gox-tag is-warning" style={{ marginLeft: 8 }}>偏遠客代 {o.remoteAgentCode}</span>
+                  )}
+                </span>
+              }
+            />
             <Field label="農友" value={farm} />
             <Field label="商品" value={`${o.productName}　${o.spec}　×${o.qty}`} />
             <Field label="溫層" value={<TempLayerTag layer={o.tempLayer} />} />
             <Field label="預定出貨區間" value={o.shipWindow ? `${o.shipWindow[0]}–${o.shipWindow[1]}` : '—'} />
-            <Field label="不可出貨日" value={o.blockedDates?.length ? o.blockedDates.join('、') : '—'} />
+            <Field
+              label="不可出貨日"
+              value={o.blockedDates?.length ? <span style={{ color: 'var(--gox-danger)' }}>{o.blockedDates.join('、')}</span> : '—'}
+            />
+            <Field
+              label="指定出貨日"
+              value={o.forcedShipDate ? <span style={{ color: 'var(--gox-success)' }}>{o.forcedShipDate}</span> : '—'}
+            />
+            <Field label="農友印單日" value={o.printedAt || <span style={{ color: 'var(--gox-text-muted)' }}>尚未印單</span>} />
             {o.failReason && <Field label="無法出貨原因" value={o.failReason} />}
             <Field label="給農友備註" value={o.cleanRemark || <span style={{ color: 'var(--gox-text-muted)' }}>（AI 未產生，建議改單補上）</span>} />
 
@@ -193,6 +227,14 @@ export default function OrderDetail() {
                   <button className="gox-btn gox-btn-default" style={{ padding: '4px 12px', fontSize: 13 }} onClick={addRange}>＋ 新增區間</button>
                 </div>
               </div>
+            </div>
+
+            <div className="gox-form-row">
+              <label>指定出貨日</label>
+              <input type="date" className="gox-input" value={forcedShip} onChange={(e) => setForcedShip(e.target.value)} />
+              {forcedShip && (
+                <button className="gox-btn gox-btn-default" style={{ padding: '4px 10px' }} onClick={() => setForcedShip('')}>清除</button>
+              )}
             </div>
 
             <div className="gox-form-row">

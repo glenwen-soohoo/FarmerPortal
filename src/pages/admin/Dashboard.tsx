@@ -157,13 +157,26 @@ export default function Dashboard() {
           <table className="gox-table">
             <thead>
               <tr>
-                <th>訂單號</th>
+                <th>訂單 / 物流編號</th>
                 <th>收件人 / 電話</th>
                 <th>農友</th>
                 <th>商品 / 規格</th>
-                <th>派單狀態</th>
+                <th>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span>派單狀態</span>
+                    <a
+                      className="gox-btn-op"
+                      style={{ fontWeight: 400 }}
+                      href="https://fmec.famiport.com.tw/FP_Entrance/QueryBox"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      貨態查詢
+                    </a>
+                  </div>
+                </th>
                 <th>預定出貨區間</th>
-                <th>不可出貨日</th>
+                <th>出貨判定</th>
                 <th>給農友備註</th>
                 <th className="cell-ops">操作</th>
               </tr>
@@ -171,7 +184,18 @@ export default function Dashboard() {
             <tbody>
               {rows.map((o) => (
                 <tr key={o.id}>
-                  <td>{o.orderNumber}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <div>{o.orderNumber}</div>
+                    <div style={{ marginTop: 10 }}>
+                      {o.trackingNos?.length ? (
+                        o.trackingNos.map((t, i) => (
+                          <div key={i} style={{ color: 'var(--gox-text-sub)' }}>{t}</div>
+                        ))
+                      ) : (
+                        <div style={{ color: 'var(--gox-text-muted)' }}>尚無物流編號</div>
+                      )}
+                    </div>
+                  </td>
                   <td>
                     <div>{o.recipient}</div>
                     <div style={{ color: 'var(--gox-text-muted)' }}>{o.phone}</div>
@@ -189,8 +213,25 @@ export default function Dashboard() {
                     </div>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>{windowText(o)}</td>
-                  <td style={{ color: o.blockedDates?.length ? 'var(--gox-danger)' : 'var(--gox-text-muted)', whiteSpace: 'nowrap' }}>
-                    {o.blockedDates?.length ? o.blockedDates.map((d, i) => <div key={i}>{d}</div>) : '—'}
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    {(!o.blockedDates?.length && !o.forcedShipDate) ? (
+                      <span style={{ color: 'var(--gox-text-muted)' }}>—</span>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {o.blockedDates?.length ? (
+                          <div style={{ color: 'var(--gox-danger)' }}>
+                            <div style={{ fontSize: 10, opacity: 0.85 }}>不可出貨日</div>
+                            {o.blockedDates.map((d, i) => <div key={i}>{d}</div>)}
+                          </div>
+                        ) : null}
+                        {o.forcedShipDate ? (
+                          <div style={{ color: 'var(--gox-success)' }}>
+                            <div style={{ fontSize: 10, opacity: 0.85 }}>指定出貨日</div>
+                            <div>{o.forcedShipDate}</div>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </td>
                   <td style={{ maxWidth: 220, color: o.cleanRemark ? 'var(--gox-text)' : 'var(--gox-text-muted)' }}>{o.cleanRemark || '—'}</td>
                   <td className="cell-ops">

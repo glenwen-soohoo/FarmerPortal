@@ -39,5 +39,22 @@ export function isInUpcomingPage(order: Order, todayIso: string): boolean {
   return timeBucket(order, todayIso) === 'upcoming'
 }
 
+// 農友清單排序：同品名聚在一起、同規格相鄰（每張單仍獨立、不合併）。
+// 排序鍵：品名(清洗後 variety→productName) → 規格 → 盒數多優先 → 訂單號。
+export function sortForFarmer(list: Order[]): Order[] {
+  const name = (o: Order) => (o.variety && o.variety.trim()) || o.productName
+  return [...list].sort(
+    (a, b) =>
+      name(a).localeCompare(name(b), 'zh-Hant') ||
+      a.spec.localeCompare(b.spec, 'zh-Hant') ||
+      b.qty - a.qty ||
+      a.orderNumber.localeCompare(b.orderNumber)
+  )
+}
+
+// 提早印單警告（個別 / 批次 按下去都先跳這則確認）
+export const EARLY_SHIP_WARNING =
+  '今日尚未到達出貨時間，本功能僅提早印單，請到出貨區間再進行出貨。如因提早出貨而導致客訴損失，需自行負擔相關損失。'
+
 // 預設測試日期（挑一個能同時看到可出貨與預告的日子）
 export const DEFAULT_DEV_TODAY = '2026-06-12'

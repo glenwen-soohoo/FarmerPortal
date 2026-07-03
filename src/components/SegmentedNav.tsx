@@ -9,7 +9,7 @@ interface Item {
 export default function SegmentedNav({ items, locked }: { items: Item[]; locked?: boolean }) {
   return (
     <div
-      className="flex gap-2 border-b border-line bg-white px-4 pt-3"
+      className="flex gap-2 overflow-x-auto border-b border-line bg-white px-4 pt-3"
       style={locked ? { pointerEvents: 'none', opacity: 0.4 } : undefined}
     >
       {items.map((it) => (

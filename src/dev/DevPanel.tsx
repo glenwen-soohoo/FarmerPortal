@@ -16,9 +16,11 @@ interface Props {
   onChange: (iso: string) => void
   shippableCount: number
   upcomingCount: number
+  earlyEligible: boolean
+  onToggleEarly: () => void
 }
 
-export default function DevPanel({ today, onChange, shippableCount, upcomingCount }: Props) {
+export default function DevPanel({ today, onChange, shippableCount, upcomingCount, earlyEligible, onToggleEarly }: Props) {
   const [open, setOpen] = useState(true)
 
   return (
@@ -68,6 +70,16 @@ export default function DevPanel({ today, onChange, shippableCount, upcomingCoun
             </div>
           </div>
           <div className="mt-2 text-xs text-gray-400">改日期後，兩區會依「出貨起始日」重新分配</div>
+
+          <div className="mt-3 border-t border-gray-600 pt-3">
+            <button
+              onClick={onToggleEarly}
+              className="w-full rounded py-1.5 text-sm font-bold"
+              style={{ background: earlyEligible ? '#1F6E43' : '#6b6b5f', color: '#fff' }}
+            >
+              提早出貨資格：{earlyEligible ? '有' : '無'}（點擊切換）
+            </button>
+          </div>
         </div>
       ) : (
         <button
