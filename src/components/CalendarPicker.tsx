@@ -26,11 +26,15 @@ export default function CalendarPicker({ title, value, onSelect, onClose }: Prop
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex flex-col justify-end"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ background: 'rgba(43,43,38,0.4)' }}
       onClick={onClose}
     >
-      <div className="rounded-t-2xl bg-white" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="w-full max-w-md rounded-2xl bg-white"
+        style={{ maxHeight: '85vh', overflowY: 'auto' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <span className="text-xl font-bold text-ink">{title}</span>
           <button onClick={onClose} className="text-base font-medium text-ink2" style={{ minHeight: 44, padding: '0 8px' }}>

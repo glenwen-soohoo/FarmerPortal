@@ -70,7 +70,9 @@ export function useListFilter(orders: Order[]): {
   const filterButton = (
     <button
       onClick={() => setOpen((v) => !v)}
-      className="flex w-full items-center justify-between rounded-lg border border-line bg-white px-4"
+      className={`flex w-full items-center justify-between border border-line bg-white px-4 ${
+        open ? 'rounded-t-lg border-b-0' : 'rounded-lg'
+      }`}
       style={{ minHeight: 56 }}
     >
       <span className="flex items-center gap-2 text-lg font-bold text-ink">
@@ -84,7 +86,7 @@ export function useListFilter(orders: Order[]): {
   const filterPanel = (
     <>
       {open && (
-        <div className="mt-2 space-y-3 rounded-card border border-line bg-white p-4">
+        <div className="space-y-3 rounded-b-lg border border-line bg-white p-4">
           {/* 出貨日：起、迄 同一排 */}
           <div className="flex items-stretch gap-2">
             <div className="flex-1">

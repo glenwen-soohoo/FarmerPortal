@@ -100,7 +100,7 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
           <div key={g.product} className="flex gap-4 rounded-card p-4" style={{ background: cardBg }}>
             {/* 左側：商品資訊 + 批次（黏頁，往下滾仍看得到） */}
             <div className="w-44 shrink-0 self-start" style={{ position: 'sticky', top: 0 }}>
-              <div className="text-2xl font-bold text-white">{g.product}</div>
+              <div className="text-3xl font-bold text-white">{g.product}</div>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                 {temps.map((t) => (
                   <span key={t} className="text-base font-bold" style={{ color: TEMP_LIGHT_TEXT[t] }}>

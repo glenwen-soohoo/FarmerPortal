@@ -114,7 +114,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               <TempLayerTag layer={order.tempLayer} />
             </div>
           )}
-          <div className={`${hideProduct ? '' : 'mt-1'} text-2xl text-ink2`}>
+          <div className={`${hideProduct ? '' : 'mt-1'} text-2xl font-bold text-ink`}>
             {order.spec}　×{order.qty}
           </div>
 
