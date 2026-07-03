@@ -1,7 +1,13 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import type { Order } from '../types'
+import { Picker, PickerField, type PickerOption } from './Picker'
+import CalendarPicker from './CalendarPicker'
 
 const uniq = (arr: string[]) => Array.from(new Set(arr))
+const opt = (arr: string[], allLabel = '全部'): PickerOption[] => [
+  { label: allLabel, value: '' },
+  ...arr.map((v) => ({ label: v, value: v })),
+]
 
 // 出貨日區間比對：MM/DD 字串同年度下字典序＝時間序，可直接字串比較。
 // 未輸入起 → 不限開始；未輸入迄 → 不限結束。
@@ -44,6 +50,8 @@ export function useListFilter(orders: Order[]): {
   const [to, setTo] = useState('')
   const [name, setName] = useState('') // 商品名，'' = 全部
   const [spec, setSpec] = useState('') // 規格，'' = 全部
+  // 目前開著哪個彈窗選擇器
+  const [picker, setPicker] = useState<null | 'from' | 'to' | 'name' | 'spec'>(null)
 
   // ⚠️ 見檔頭：商品名選項判定邏輯未定，暫用原字串去重
   const nameOptions = useMemo(() => uniq(orders.map((o) => o.productName).filter(Boolean)), [orders])
@@ -58,89 +66,69 @@ export function useListFilter(orders: Order[]): {
   )
   const activeCount = (from || to ? 1 : 0) + (name ? 1 : 0) + (spec ? 1 : 0)
 
+  // 篩選＝可展開收合區塊的標題列（整條可點、右側箭頭指示狀態）
   const filterButton = (
     <button
       onClick={() => setOpen((v) => !v)}
-      className="inline-flex items-center gap-2 rounded border border-line bg-white px-4 text-base font-medium text-ink"
-      style={{ minHeight: 44 }}
+      className="flex w-full items-center justify-between rounded-lg border border-line bg-white px-4"
+      style={{ minHeight: 56 }}
     >
-      篩選
-      {activeCount > 0 && <span className="rounded-full bg-brand px-2 text-sm text-white">{activeCount}</span>}
+      <span className="flex items-center gap-2 text-lg font-bold text-ink">
+        篩選
+        {activeCount > 0 && <span className="rounded-full bg-brand px-2 text-sm font-normal text-white">{activeCount}</span>}
+      </span>
+      <span className="text-lg text-ink2">{open ? '▲' : '▼'}</span>
     </button>
   )
 
-  const filterPanel = open ? (
-    <div className="mt-2 space-y-3 rounded-card border border-line bg-white p-4">
-      <div className="flex items-center gap-2">
-        <label className="w-20 shrink-0 text-base text-ink2">出貨日</label>
-        <input
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          placeholder="起 例06/05"
-          className="min-w-0 flex-1 rounded border border-line px-3 text-base"
-          style={{ minHeight: 44 }}
-        />
-        <span className="text-ink2">～</span>
-        <input
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          placeholder="迄 例06/20"
-          className="min-w-0 flex-1 rounded border border-line px-3 text-base"
-          style={{ minHeight: 44 }}
-        />
-      </div>
+  const filterPanel = (
+    <>
+      {open && (
+        <div className="mt-2 space-y-3 rounded-card border border-line bg-white p-4">
+          {/* 出貨日：起、迄 同一排 */}
+          <div className="flex items-stretch gap-2">
+            <div className="flex-1">
+              <PickerField label="出貨日（起）" value={from} placeholder="不限" onClick={() => setPicker('from')} />
+            </div>
+            <div className="flex items-center text-ink2">～</div>
+            <div className="flex-1">
+              <PickerField label="出貨日（迄）" value={to} placeholder="不限" onClick={() => setPicker('to')} />
+            </div>
+          </div>
+          <PickerField label="商品名" value={name} placeholder="全部" onClick={() => setPicker('name')} />
+          <PickerField label="規格" value={spec} placeholder="全部" onClick={() => setPicker('spec')} />
 
-      <div className="flex items-center gap-3">
-        <label className="w-20 shrink-0 text-base text-ink2">商品名</label>
-        <select
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="flex-1 rounded border border-line px-3 text-base"
-          style={{ minHeight: 44 }}
-        >
-          <option value="">全部</option>
-          {nameOptions.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <label className="w-20 shrink-0 text-base text-ink2">規格</label>
-        <select
-          value={spec}
-          onChange={(e) => setSpec(e.target.value)}
-          className="flex-1 rounded border border-line px-3 text-base"
-          style={{ minHeight: 44 }}
-        >
-          <option value="">全部</option>
-          {specOptions.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {activeCount > 0 && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => {
-              setFrom('')
-              setTo('')
-              setName('')
-              setSpec('')
-            }}
-            className="text-base font-medium text-brand"
-          >
-            清除篩選
-          </button>
+          {activeCount > 0 && (
+            <button
+              onClick={() => {
+                setFrom('')
+                setTo('')
+                setName('')
+                setSpec('')
+              }}
+              className="w-full rounded-lg border border-line text-base font-medium text-brand"
+              style={{ minHeight: 52 }}
+            >
+              清除篩選
+            </button>
+          )}
         </div>
       )}
-    </div>
-  ) : null
+
+      {picker === 'from' && (
+        <CalendarPicker title="出貨日（起）" value={from} onSelect={setFrom} onClose={() => setPicker(null)} />
+      )}
+      {picker === 'to' && (
+        <CalendarPicker title="出貨日（迄）" value={to} onSelect={setTo} onClose={() => setPicker(null)} />
+      )}
+      {picker === 'name' && (
+        <Picker title="商品名" options={opt(nameOptions)} value={name} onSelect={setName} onClose={() => setPicker(null)} />
+      )}
+      {picker === 'spec' && (
+        <Picker title="規格" options={opt(specOptions)} value={spec} onSelect={setSpec} onClose={() => setPicker(null)} />
+      )}
+    </>
+  )
 
   return { filtered, filterButton, filterPanel, activeCount }
 }

@@ -4,7 +4,7 @@ import type { TempLayer } from '../types'
 const COLOR: Record<TempLayer, string> = {
   常溫: '#389e0d',
   冷藏: '#0958d9',
-  冷凍: '#1d39c4',
+  冷凍: '#0e919e',
 }
 
 export default function TempLayerTag({ layer }: { layer: TempLayer }) {

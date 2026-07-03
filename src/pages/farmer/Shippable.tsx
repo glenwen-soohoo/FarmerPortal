@@ -17,14 +17,14 @@ export default function Shippable() {
 
   return (
     <div>
-      <div className="mx-auto mb-4 max-w-2xl">
+      <div className="mx-auto mb-4 max-w-4xl">
         {filterButton}
         {filterPanel}
       </div>
       {filtered.length === 0 ? (
         <EmptyState message={list.length === 0 ? '目前沒有要出貨的單' : '沒有符合篩選的單'} />
       ) : (
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto max-w-4xl">
           {/* 依商品分區大卡片；批次列印出貨單在各大卡片右上角（只印同商品） */}
           <ProductGroupList orders={filtered} mode="print" setNavLocked={setNavLocked} />
         </div>

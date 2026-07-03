@@ -10,9 +10,9 @@ import { EARLY_SHIP_WARNING } from '../utils/shipDate'
 const productKey = (o: Order) => (o.variety && o.variety.trim()) || o.productName
 
 // 大卡片底色依溫層（深色）：常溫=深綠、冷藏=深藍、冷凍=深藍(更深)
-const TEMP_DARK_BG: Record<string, string> = { 常溫: '#1B4D2E', 冷藏: '#123A6B', 冷凍: '#172554' }
+const TEMP_DARK_BG: Record<string, string> = { 常溫: '#1B4D2E', 冷藏: '#045579', 冷凍: '#0E4F57' }
 // 溫層文字（淺色、無框無底，顯示在深色大卡上）
-const TEMP_LIGHT_TEXT: Record<string, string> = { 常溫: '#B7EB8F', 冷藏: '#91CAFF', 冷凍: '#ADC6FF' }
+const TEMP_LIGHT_TEXT: Record<string, string> = { 常溫: '#B7EB8F', 冷藏: '#91CAFF', 冷凍: '#7FE3E8' }
 
 interface Group {
   product: string
@@ -97,31 +97,25 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
         const cardBg = TEMP_DARK_BG[temps[0]] ?? '#2B2B26'
 
         return (
-          <div key={g.product} className="rounded-card" style={{ background: cardBg }}>
-            {/* 大卡片標題列：商品名 + 溫層 + 右上角批次按鈕 / 批次控制 */}
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-2xl font-bold text-white">{g.product}</span>
+          <div key={g.product} className="flex gap-4 rounded-card p-4" style={{ background: cardBg }}>
+            {/* 左側：商品資訊 + 批次（黏頁，往下滾仍看得到） */}
+            <div className="w-44 shrink-0 self-start" style={{ position: 'sticky', top: 0 }}>
+              <div className="text-2xl font-bold text-white">{g.product}</div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                 {temps.map((t) => (
                   <span key={t} className="text-base font-bold" style={{ color: TEMP_LIGHT_TEXT[t] }}>
                     {t}
                   </span>
                 ))}
-                <span className="text-base" style={{ color: '#C9C7BE' }}>
-                  {g.orders.length} 張 · {g.totalQty} 件
-                </span>
+              </div>
+              <div className="mt-1 text-base" style={{ color: '#C9C7BE' }}>
+                {g.orders.length} 張 · {g.totalQty} 件
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="mt-3 flex flex-col gap-2">
                 {active ? (
                   <>
                     <span className="text-base" style={{ color: '#C9C7BE' }}>已勾選 {selected.size} 筆</span>
-                    <BigButton size="md" variant="secondary" onClick={cancel}>
-                      取消
-                    </BigButton>
-                    <BigButton size="md" variant="secondary" onClick={toggleAll}>
-                      {allSelected ? '取消全選' : '全選'}
-                    </BigButton>
                     {mode === 'early' ? (
                       <button
                         onClick={() => setConfirming(true)}
@@ -136,6 +130,12 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
                         {confirmLabel}
                       </BigButton>
                     )}
+                    <BigButton size="md" variant="secondary" onClick={toggleAll}>
+                      {allSelected ? '取消全選' : '全選'}
+                    </BigButton>
+                    <BigButton size="md" variant="secondary" onClick={cancel}>
+                      取消
+                    </BigButton>
                   </>
                 ) : showBatch ? (
                   mode === 'early' ? (
@@ -156,8 +156,8 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
               </div>
             </div>
 
-            {/* 小卡片：各規格 / 訂單明細 */}
-            <div className="space-y-3 px-4 pb-4">
+            {/* 右側：小卡片（各規格 / 訂單明細） */}
+            <div className="min-w-0 flex-1 space-y-3">
               {g.orders.map((o) => (
                 <OrderCard
                   key={o.id}
