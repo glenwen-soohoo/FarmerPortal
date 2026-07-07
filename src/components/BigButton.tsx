@@ -10,8 +10,8 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT: Record<Variant, string> = {
   primary: 'bg-brand text-white active:bg-brand-dark',
-  secondary: 'bg-white text-ink border border-line active:bg-mutedbg',
-  danger: 'bg-white text-danger border border-danger active:bg-red-50',
+  secondary: 'bg-white text-ink border-2 border-line active:bg-mutedbg',
+  danger: 'bg-white text-danger border-2 border-danger active:bg-red-50',
 }
 
 export default function BigButton({

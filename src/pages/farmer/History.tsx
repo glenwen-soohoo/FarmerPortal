@@ -20,7 +20,9 @@ export default function History() {
       ) : (
         <div className="mx-auto max-w-2xl space-y-4">
           {filtered.map((o) => (
-            <OrderCard key={o.id} order={o} />
+            <div key={o.id} className="overflow-hidden rounded-card border border-line bg-white" style={{ boxShadow: '0 1px 3px rgba(43,43,38,0.08)' }}>
+              <OrderCard order={o} />
+            </div>
           ))}
         </div>
       )}

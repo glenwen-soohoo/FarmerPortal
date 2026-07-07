@@ -10,7 +10,6 @@ import AllOrders from './pages/farmer/AllOrders'
 import UnshippedPreview from './pages/farmer/UnshippedPreview'
 import Me from './pages/farmer/Me'
 import Dashboard from './pages/admin/Dashboard'
-import Binding from './pages/admin/Binding'
 import Accounts from './pages/admin/Accounts'
 import OrderDetail from './pages/admin/OrderDetail'
 
@@ -33,7 +32,6 @@ export default function App() {
 
       {/* 業務端後台 */}
       <Route path="/admin/dashboard" element={<Dashboard />} />
-      <Route path="/admin/binding" element={<Binding />} />
       <Route path="/admin/accounts" element={<Accounts />} />
       <Route path="/admin/orders/:id" element={<OrderDetail />} />
 

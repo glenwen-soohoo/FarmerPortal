@@ -1,4 +1,4 @@
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../store'
 import BigButton from '../../components/BigButton'
 
@@ -9,11 +9,14 @@ export default function Me() {
 
   return (
     <div className="mx-auto max-w-md">
-      <h2 className="mb-4 text-xl font-bold text-ink">我的</h2>
       <div className="rounded-card border border-line bg-white p-5 space-y-3">
         <div>
           <div className="text-base text-ink2">農場名稱</div>
-          <div className="text-xl text-ink">{me?.farm}</div>
+          <div className="text-2xl font-bold text-ink">{me?.farm}</div>
+        </div>
+        <div>
+          <div className="text-base text-ink2">聯絡人</div>
+          <div className="text-xl text-ink">{me?.name}</div>
         </div>
         <div>
           <div className="text-base text-ink2">聯絡電話</div>
@@ -21,16 +24,9 @@ export default function Me() {
         </div>
       </div>
 
-      <div className="mt-6 flex flex-col gap-3">
-        <Link to="/farmer/history">
-          <BigButton variant="secondary" className="w-full">
-            出貨紀錄
-          </BigButton>
-        </Link>
-        <BigButton variant="secondary" className="w-full" onClick={() => navigate('/farmer/login')}>
-          登出
-        </BigButton>
-      </div>
+      <BigButton variant="secondary" className="mt-6 w-full" onClick={() => navigate('/farmer/login')}>
+        登出
+      </BigButton>
     </div>
   )
 }

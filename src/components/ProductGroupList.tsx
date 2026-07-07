@@ -3,16 +3,12 @@ import type { Order } from '../types'
 import { useStore } from '../store'
 import OrderCard from './OrderCard'
 import BigButton from './BigButton'
+import TempLayerTag from './TempLayerTag'
 import ConfirmDialog from './ConfirmDialog'
 import { EARLY_SHIP_WARNING } from '../utils/shipDate'
 
 // 商品分區依「清洗後名稱」（variety→productName）
 const productKey = (o: Order) => (o.variety && o.variety.trim()) || o.productName
-
-// 大卡片底色依溫層（深色）：常溫=深綠、冷藏=深藍、冷凍=深藍(更深)
-const TEMP_DARK_BG: Record<string, string> = { 常溫: '#1B4D2E', 冷藏: '#045579', 冷凍: '#0E4F57' }
-// 溫層文字（淺色、無框無底，顯示在深色大卡上）
-const TEMP_LIGHT_TEXT: Record<string, string> = { 常溫: '#B7EB8F', 冷藏: '#91CAFF', 冷凍: '#7FE3E8' }
 
 interface Group {
   product: string
@@ -39,8 +35,6 @@ interface Props {
   earlyEligible?: boolean // early 模式：有資格才顯示批次鈕、且個別卡可提早印單
   setNavLocked: (v: boolean) => void
 }
-
-const EARLY_BTN = { minHeight: 48, background: '#C8D194', color: '#3A401A' } as const
 
 export default function ProductGroupList({ orders, mode, earlyEligible, setNavLocked }: Props) {
   const { printOrder } = useStore()
@@ -83,53 +77,45 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
     }, 1600)
   }
 
-  const batchLabel = mode === 'early' ? '批次提早印單' : '批次列印出貨單'
-  const confirmLabel = mode === 'early' ? '提早列印勾選' : '列印勾選訂單'
+  const batchLabel = mode === 'early' ? '批次提早印單' : '批次列印'
+  const confirmLabel = mode === 'early' ? '提早列印勾選' : '列印勾選'
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {groups.map((g) => {
         const active = batchProduct === g.product
         const otherActive = batchProduct !== null && !active
         const allSelected = active && g.orders.length > 0 && g.orders.every((o) => selected.has(o.id))
         const toggleAll = () => setSelected(allSelected ? new Set() : new Set(g.orders.map((o) => o.id)))
         const temps = [...new Set(g.orders.map((o) => o.tempLayer))]
-        const cardBg = TEMP_DARK_BG[temps[0]] ?? '#2B2B26'
 
         return (
-          <div key={g.product} className="flex gap-4 rounded-card p-4" style={{ background: cardBg }}>
-            {/* 左側：商品資訊 + 批次（黏頁，往下滾仍看得到） */}
-            <div className="w-44 shrink-0 self-start" style={{ position: 'sticky', top: 0 }}>
-              <div className="text-3xl font-bold text-white">{g.product}</div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                {temps.map((t) => (
-                  <span key={t} className="text-base font-bold" style={{ color: TEMP_LIGHT_TEXT[t] }}>
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-1 text-base" style={{ color: '#C9C7BE' }}>
-                {g.orders.length} 張 · {g.totalQty} 件
-              </div>
+          <section
+            key={g.product}
+            className={`flex rounded-card border bg-white ${active ? 'border-brand' : 'border-line'}`}
+            style={{ borderWidth: active ? 2 : 1, boxShadow: '0 1px 3px rgba(43,43,38,0.08)' }}
+          >
+            {/* 左側：白底商品欄（撐滿群組高度標示分組；商品名 sticky，捲動仍看得到） */}
+            <aside className="w-[264px] shrink-0 rounded-l-card border-r border-line bg-white">
+              <div className="sticky top-0 p-4">
+                <div className="text-3xl font-bold leading-tight text-ink">{g.product}</div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  {temps.map((t) => (
+                    <TempLayerTag key={t} layer={t} />
+                  ))}
+                </div>
+                <div className="mt-1 text-base text-ink2">
+                  {g.orders.length} 張 · {g.totalQty} 件
+                </div>
 
-              <div className="mt-3 flex flex-col gap-2">
-                {active ? (
+                {/* 批次控制：非批次時一顆次級鈕；進批次才展開 */}
+                <div className="mt-3 flex flex-col gap-2">
+                  {active ? (
                   <>
-                    <span className="text-base" style={{ color: '#C9C7BE' }}>已勾選 {selected.size} 筆</span>
-                    {mode === 'early' ? (
-                      <button
-                        onClick={() => setConfirming(true)}
-                        disabled={selected.size === 0}
-                        className="rounded px-4 text-base font-bold disabled:opacity-40"
-                        style={EARLY_BTN}
-                      >
-                        {confirmLabel}
-                      </button>
-                    ) : (
-                      <BigButton size="md" disabled={selected.size === 0} onClick={() => setConfirming(true)}>
-                        {confirmLabel}
-                      </BigButton>
-                    )}
+                    <span className="text-base text-ink2">已勾選 {selected.size} 筆</span>
+                    <BigButton size="md" disabled={selected.size === 0} onClick={() => setConfirming(true)}>
+                      {confirmLabel}
+                    </BigButton>
                     <BigButton size="md" variant="secondary" onClick={toggleAll}>
                       {allSelected ? '取消全選' : '全選'}
                     </BigButton>
@@ -138,26 +124,16 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
                     </BigButton>
                   </>
                 ) : showBatch ? (
-                  mode === 'early' ? (
-                    <button
-                      onClick={() => enter(g.product)}
-                      disabled={otherActive}
-                      className="rounded px-4 text-base font-bold disabled:opacity-40"
-                      style={EARLY_BTN}
-                    >
-                      {batchLabel}
-                    </button>
-                  ) : (
-                    <BigButton size="md" variant="secondary" onClick={() => enter(g.product)} disabled={otherActive}>
-                      {batchLabel}
-                    </BigButton>
-                  )
-                ) : null}
+                  <BigButton size="md" variant="secondary" onClick={() => enter(g.product)} disabled={otherActive}>
+                    {batchLabel}
+                  </BigButton>
+                  ) : null}
+                </div>
               </div>
-            </div>
+            </aside>
 
-            {/* 右側：小卡片（各規格 / 訂單明細） */}
-            <div className="min-w-0 flex-1 space-y-3">
+            {/* 右側：該商品的訂單列（用分隔線區隔，特殊狀態才上底色） */}
+            <div className="min-w-0 flex-1 divide-y divide-line overflow-hidden rounded-r-card">
               {g.orders.map((o) => (
                 <OrderCard
                   key={o.id}
@@ -171,7 +147,7 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
                 />
               ))}
             </div>
-          </div>
+          </section>
         )
       })}
 

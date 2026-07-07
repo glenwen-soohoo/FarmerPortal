@@ -34,30 +34,27 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   const [askSupplement, setAskSupplement] = useState(false)
   const [askFail, setAskFail] = useState(false)
   const [failNotice, setFailNotice] = useState(false)
+  const [showRecipient, setShowRecipient] = useState(false) // 收件資訊預設收合
 
   const printed = order.shipStatus === '已印單'
   const shipped = order.shipStatus === '已出貨'
   const needsReprint = order.shipStatus === '改單待重印' || !!order.isUpdated
   const forced = !!order.forcedShipDate // 指定出貨
 
-  // 卡片底色 / 邊框：批次選中(綠) > 指定出貨(淺紅) > 改單待重印(琥珀) > 一般
-  let cardBg = '#fff'
-  let cardBorderColor = '#E5E1D8'
-  let cardBorderW = 1
-  if (selectable && selected) {
-    cardBg = '#EAF3EC'
-    cardBorderColor = '#1F6E43'
-    cardBorderW = 2
-  } else if (forced) {
-    cardBg = '#FDEBEC'
-    cardBorderColor = '#D98080'
-    cardBorderW = 2
-  } else if (needsReprint) {
-    cardBg = '#FDF3E0'
-    cardBorderColor = '#D99A2B'
-    cardBorderW = 2
-  }
+  // 群組容器內的一列：不用左邊色條 / 整列上色強調（見 #24 迭代）；狀態一律靠徽章表達。
+  const rowCls = selectable && selected ? 'bg-mutedbg' : '' // 批次選中：中性淺底
   const dimmed = selectable && selectDisabled
+
+  // 已印單 / 已出貨：接在「預計出貨」後面同一行（whitespace-nowrap 不折行）
+  const statusNode = printed ? (
+    <span className="whitespace-nowrap text-lg font-bold text-muted">
+      已印單 ✓<span className="ml-2 text-sm font-normal text-muted">{order.printedAt}</span>
+    </span>
+  ) : shipped ? (
+    <span className="whitespace-nowrap text-lg font-bold text-muted">
+      已出貨 ✓<span className="ml-2 text-sm font-normal text-muted">{order.printedAt}</span>
+    </span>
+  ) : null
 
   const doPrint = () => {
     setAskReprint(false)
@@ -81,24 +78,16 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   }
 
   return (
-    <div
-      className="flex items-stretch gap-4 rounded-card p-5"
-      style={{
-        background: cardBg,
-        border: `${cardBorderW}px solid ${cardBorderColor}`,
-        boxShadow: '0 1px 3px rgba(43,43,38,0.06)',
-        opacity: dimmed ? 0.45 : 1,
-      }}
-    >
-      {/* 左：訂單資訊（點擊展開）。順序依「對農友的重要性」：產品 → 預計出貨 → 收件人 → 出貨提醒 */}
+    <div className={`flex items-stretch gap-4 p-5 ${rowCls}`} style={{ opacity: dimmed ? 0.45 : 1 }}>
+      {/* 左：訂單資訊。順序依「對農友的重要性」：規格數量 → 出貨提醒 → 出貨日 → (收合)收件資訊 */}
       <div className="min-w-0 flex-1">
         {forced && (
-          <div className="mb-3 inline-block rounded px-3 py-1 text-lg font-bold text-white" style={{ background: '#C0392B' }}>
+          <div className="mb-3 inline-flex items-center rounded-full bg-danger/10 px-4 py-1 text-lg font-bold text-danger">
             指定今日出貨
           </div>
         )}
         {needsReprint && (
-          <div className="mb-3 inline-block rounded px-3 py-1 text-lg font-bold text-white" style={{ background: '#D99A2B' }}>
+          <div className="mb-3 inline-flex items-center rounded-full bg-accent/15 px-4 py-1 text-lg font-bold text-amberink">
             已更新，請重印
           </div>
         )}
@@ -107,64 +96,74 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
           className={selectable && !selectDisabled ? 'w-full cursor-pointer text-left' : 'w-full text-left'}
           onClick={selectable && !selectDisabled ? () => onToggleSelect?.() : undefined}
         >
-          {/* 1. 產品 / 溫層（分組大卡內隱藏，已顯示在大卡標題） */}
           {!hideProduct && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="text-2xl font-bold text-ink">{order.productName}</span>
               <TempLayerTag layer={order.tempLayer} />
             </div>
           )}
-          <div className={`${hideProduct ? '' : 'mt-1'} text-2xl font-bold text-ink`}>
+
+          {/* 預計出貨：放最上面（指定今日出貨時不顯示，避免與「今日」混淆）；已印單接在其後同一行 */}
+          {!forced ? (
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-base text-muted">預計出貨</span>
+              <span className="text-2xl font-bold text-brand">{windowText(order)}</span>
+              {statusNode}
+            </div>
+          ) : (
+            statusNode && <div>{statusNode}</div>
+          )}
+
+          {/* 規格 × 數量：自己一行、最大（與預計出貨分行，規格再長也不擠壓） */}
+          <div className="mt-2 text-3xl font-bold text-ink">
             {order.spec}　×{order.qty}
           </div>
 
-          {/* 2. 預計出貨日（已印單 / 已出貨 狀態放右邊） */}
-          <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="text-base text-muted">預計出貨</span>
-            <span className="text-xl font-bold text-brand">{windowText(order)}</span>
-            {printed && (
-              <span className="text-lg font-bold text-ok">
-                已印單 ✓<span className="ml-2 text-sm font-normal text-muted">{order.printedAt}</span>
-              </span>
-            )}
-            {shipped && (
-              <span className="text-lg font-bold text-ok">
-                已出貨 ✓<span className="ml-2 text-sm font-normal text-muted">{order.printedAt}</span>
-              </span>
-            )}
+          {/* 出貨提醒 */}
+          <div className="mt-3">
+            <CleanRemark text={order.cleanRemark} />
           </div>
-
-          {/* 3. 訂單編號 / 姓名、電話 / 地址 — 訂單編號與姓名全黑粗體 */}
-          <div className="mt-6 text-base">
-            <span className="font-normal text-muted">訂單編號 </span>
-            <span className="font-bold text-ink">{order.orderNumber}</span>
-          </div>
-          <div className="mt-1 text-lg font-bold text-ink">
-            {order.recipient}
-            <span className="ml-2 text-base font-normal text-ink2">{order.phone}</span>
-          </div>
-          <div className="mt-1 text-base text-ink2">{order.address}</div>
         </div>
 
-        {/* 出貨提醒（用較大間距與上方分隔）；無提醒也顯示「無」 */}
-        <div className="mt-6">
-          <CleanRemark text={order.cleanRemark} />
-        </div>
+        {/* 4. 收件資訊：預設收合（都印在出貨單上，螢幕不搶版面） */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowRecipient((v) => !v)
+          }}
+          className="mt-3 inline-flex items-center gap-1 rounded border-2 border-line bg-white px-3 py-1.5 text-base font-medium text-ink active:bg-mutedbg"
+        >
+          {showRecipient ? '收合收件資訊' : '顯示收件資訊'}
+          <span className="text-ink2">{showRecipient ? '▴' : '▾'}</span>
+        </button>
+        {showRecipient && (
+          <div className="mt-2 border-t border-line pt-2">
+            <div className="text-base">
+              <span className="font-normal text-muted">訂單編號 </span>
+              <span className="font-bold text-ink">{order.orderNumber}</span>
+            </div>
+            <div className="mt-1 text-lg font-bold text-ink">
+              {order.recipient}
+              <span className="ml-2 text-base font-normal text-ink2">{order.phone}</span>
+            </div>
+            <div className="mt-1 text-base text-ink2">{order.address}</div>
+          </div>
+        )}
       </div>
 
-      {/* 右：超大主按鈕（撐滿卡片高度）。已出貨=唯讀無按鈕；批次勾選模式下隱藏 */}
+      {/* 右：動作區。已出貨=唯讀無按鈕；批次勾選模式下隱藏 */}
       {!selectable && !shipped && (
         <div className="flex w-40 shrink-0 flex-col gap-2">
           {upcoming ? (
             printed ? (
               <>
-                {/* 已提早印單：印過但仍未到出貨時間 */}
+                {/* 已提早印單：印過但仍未到出貨時間（中性） */}
                 <div
-                  className="flex flex-1 flex-col items-center justify-center rounded text-center text-lg font-bold leading-snug"
-                  style={{ minHeight: 120, background: '#C8D194', color: '#3A401A' }}
+                  className="flex flex-1 flex-col items-center justify-center rounded bg-mutedbg text-center text-lg font-bold leading-snug text-muted"
+                  style={{ minHeight: 120 }}
                 >
                   <span>已提早印單 ✓</span>
-                  <span className="text-sm font-normal" style={{ color: '#5C5F3F' }}>尚未到出貨時間</span>
+                  <span className="text-sm font-normal">尚未到出貨時間</span>
                 </div>
                 <BigButton variant="danger" size="md" style={{ minHeight: 44, height: 44 }} onClick={() => setAskFail(true)}>
                   無法出貨
@@ -172,11 +171,11 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               </>
             ) : earlyEligible ? (
               <>
-                {/* 有提早出貨資格：可提早印單（按下先跳警告） */}
+                {/* 有提早出貨資格：提早印單＝此頁主要動作，用主色綠（按下先跳警告） */}
                 <button
                   onClick={() => setAskEarly(true)}
-                  className="flex-1 rounded text-2xl font-bold"
-                  style={{ minHeight: 120, background: '#C8D194', color: '#3A401A' }}
+                  className="flex-1 rounded bg-brand text-2xl font-bold text-white active:bg-brand-dark"
+                  style={{ minHeight: 120 }}
                 >
                   提早印單
                 </button>
@@ -188,8 +187,8 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               <>
                 {/* 無提早資格：不可操作的說明 */}
                 <div
-                  className="flex flex-1 items-center justify-center rounded text-center text-xl font-bold leading-snug"
-                  style={{ minHeight: 120, background: '#F0EDE6', color: '#9E9E9E' }}
+                  className="flex flex-1 items-center justify-center rounded bg-mutedbg text-center text-xl font-bold leading-snug text-muted"
+                  style={{ minHeight: 120 }}
                 >
                   尚未到出貨時間
                 </div>
@@ -200,27 +199,20 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             )
           ) : printed ? (
             <>
-              {/* 已印單：黑貓收貨改由系統抓貨態自動判斷。兩顆主鈕撐滿高度，無法出貨壓到最底 */}
-              <button
-                onClick={onPrintClick}
-                className="flex-1 rounded bg-brand text-xl font-bold text-white active:bg-brand-dark"
-                style={{ minHeight: 72 }}
-              >
+              {/* 已印單：主要動作已完成 → 重印 / 補單降為次級 outline，無法出貨壓最底 */}
+              <BigButton variant="secondary" size="md" style={{ minHeight: 60 }} onClick={onPrintClick}>
                 重印相同貨單
-              </button>
-              <button
-                onClick={() => setAskSupplement(true)}
-                className="flex-1 rounded text-xl font-bold text-white"
-                style={{ minHeight: 72, background: '#7A5230' }}
-              >
+              </BigButton>
+              <BigButton variant="secondary" size="md" style={{ minHeight: 60 }} onClick={() => setAskSupplement(true)}>
                 多箱追加補單
-              </button>
+              </BigButton>
               <BigButton variant="danger" size="md" style={{ minHeight: 44, height: 44 }} onClick={() => setAskFail(true)}>
                 無法出貨
               </BigButton>
             </>
           ) : (
             <>
+              {/* 未印：印單＝唯一主鈕，最大最醒目 */}
               <button
                 onClick={onPrintClick}
                 className="flex-1 rounded bg-brand text-3xl font-bold text-white active:bg-brand-dark"

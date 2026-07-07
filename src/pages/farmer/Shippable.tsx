@@ -15,19 +15,20 @@ export default function Shippable() {
   )
   const { filtered, filterButton, filterPanel } = useListFilter(list)
 
+  if (list.length === 0) {
+    return <EmptyState message="今天沒有要出的貨，辛苦了！可到「出貨預告」看接下來的單。" />
+  }
+
   return (
     <div>
-      <div className="mx-auto mb-4 max-w-4xl">
+      <div className="mb-4">
         {filterButton}
         {filterPanel}
       </div>
       {filtered.length === 0 ? (
-        <EmptyState message={list.length === 0 ? '目前沒有要出貨的單' : '沒有符合篩選的單'} />
+        <EmptyState message="沒有符合篩選的單" />
       ) : (
-        <div className="mx-auto max-w-4xl">
-          {/* 依商品分區大卡片；批次列印出貨單在各大卡片右上角（只印同商品） */}
-          <ProductGroupList orders={filtered} mode="print" setNavLocked={setNavLocked} />
-        </div>
+        <ProductGroupList orders={filtered} mode="print" setNavLocked={setNavLocked} />
       )}
     </div>
   )

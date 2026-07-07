@@ -16,6 +16,8 @@ interface Store {
   manualEdit: (id: string, patch: Partial<Order>, editor: string) => void
   bindProduct: (productId: string, farmerId: number | undefined) => void
   setAccountStatus: (farmerId: number, status: Farmer['status']) => void
+  // 提早出貨資格：業務確認後才開放給特定農友
+  setEarlyShip: (farmerId: number, allow: boolean) => void
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -72,6 +74,8 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         ),
       setAccountStatus: (farmerId, status) =>
         setFarmers((prev) => prev.map((f) => (f.id === farmerId ? { ...f, status } : f))),
+      setEarlyShip: (farmerId, allow) =>
+        setFarmers((prev) => prev.map((f) => (f.id === farmerId ? { ...f, earlyShip: allow } : f))),
     }),
     [orders, farmers, products]
   )

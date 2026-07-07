@@ -70,7 +70,7 @@ export function useListFilter(orders: Order[]): {
   const filterButton = (
     <button
       onClick={() => setOpen((v) => !v)}
-      className={`flex w-full items-center justify-between border border-line bg-white px-4 ${
+      className={`flex w-full items-center justify-between border-2 border-line bg-white px-4 ${
         open ? 'rounded-t-lg border-b-0' : 'rounded-lg'
       }`}
       style={{ minHeight: 56 }}
@@ -86,7 +86,7 @@ export function useListFilter(orders: Order[]): {
   const filterPanel = (
     <>
       {open && (
-        <div className="space-y-3 rounded-b-lg border border-line bg-white p-4">
+        <div className="space-y-3 rounded-b-lg border-2 border-line bg-white p-4">
           {/* 出貨日：起、迄 同一排 */}
           <div className="flex items-stretch gap-2">
             <div className="flex-1">
@@ -108,7 +108,7 @@ export function useListFilter(orders: Order[]): {
                 setName('')
                 setSpec('')
               }}
-              className="w-full rounded-lg border border-line text-base font-medium text-brand"
+              className="w-full rounded-lg border-2 border-line text-base font-medium text-brand"
               style={{ minHeight: 52 }}
             >
               清除篩選

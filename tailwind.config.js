@@ -7,26 +7,26 @@ export default {
         sans: ["'Noto Sans TC'", 'sans-serif'],
       },
       colors: {
-        // 農友端（清新墨綠 + 米白）
+        // ── 農友端配色系統（重規劃 #24）─────────────────────────────
+        // 原則：中性為主（暖灰底 + 白卡 + 墨黑字），三個語意色各司其職、只做小記號：
+        //   brand 綠＝主要動作、danger 紅＝今日/急、accent 琥珀＝有異動。其餘一律去色。
+        // 中性
+        canvas: '#DAD5CB', // 暖灰頁面底（襯托白卡，不搶戲）
+        panel: '#F3F0E9', // 群組左側標籤欄（中性暖白）
+        cream: '#F7F6F2', // 米白（登入卡等）
+        ink: '#2B2B26', // 主文字（暖近黑）
+        ink2: '#6B6B5F', // 次文字
+        muted: '#8A877C', // 第三層文字 / 去色標籤
+        mutedbg: '#F0EDE6', // 內嵌淺底
+        line: '#E5E1D8', // 邊框
+        // 語意（克制使用）
         brand: {
-          DEFAULT: '#1F6E43',
+          DEFAULT: '#1F6E43', // 主要動作：印單、分頁選中、總數
           dark: '#18583A',
         },
-        accent: '#D99A2B', // 琥珀：要注意 / 已更新
-        ok: '#2E7D32',
-        danger: '#C0392B',
-        muted: '#8A877C', // 暖灰
-        mutedbg: '#F0EDE6', // 內嵌淺底（暖）
-        cream: '#F7F6F2', // 頁面米白底
-        ink: '#2B2B26', // 暖近黑
-        ink2: '#6B6B5F', // 暖次文字
-        line: '#E5E1D8', // 暖邊框
-        // 溫層（小型 outline chip，稍微收斂）
-        temp: {
-          normal: '#8A877C',
-          chill: '#2C7A9E',
-          freeze: '#1F5E86',
-        },
+        danger: '#C0392B', // 今日 / 急：指定今日、無法出貨
+        accent: '#D99A2B', // 有異動：改單重印、出貨提醒
+        amberink: '#8A5A12', // 琥珀標籤的深字色（淺琥珀底上可讀）
         // 後台 admin
         admin: {
           primary: '#409eff',

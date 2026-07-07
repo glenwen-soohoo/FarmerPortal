@@ -10,9 +10,10 @@ const STATUS_TAG: Record<Farmer['status'], string> = {
 }
 
 export default function Accounts() {
-  const { farmers, setAccountStatus } = useStore()
+  const { farmers, setAccountStatus, setEarlyShip } = useStore()
   const [detail, setDetail] = useState<Farmer | null>(null)
   const [confirmDisable, setConfirmDisable] = useState<Farmer | null>(null)
+  const [confirmEarly, setConfirmEarly] = useState<Farmer | null>(null)
   const [msg, setMsg] = useState('')
 
   const flash = (m: string) => {
@@ -20,7 +21,16 @@ export default function Accounts() {
     window.setTimeout(() => setMsg(''), 2500)
   }
 
-  // 依狀態決定按鈕：開通/停用互斥；未開通無「重設密碼」
+  // 提早出貨：開放需確認；關閉可直接關
+  const toggleEarly = (f: Farmer) => {
+    if (f.earlyShip) {
+      setEarlyShip(f.id, false)
+      flash(`已關閉「${f.farm}」提早出貨資格`)
+    } else {
+      setConfirmEarly(f)
+    }
+  }
+
   const Actions = ({ f }: { f: Farmer }) => (
     <>
       {f.status === '未開通' && (
@@ -48,7 +58,7 @@ export default function Accounts() {
       </div>
 
       <div className="gox-mockup-notice">
-        <span className="gox-mockup-strong">master 在 Enzo</span>：農友主檔資料唯讀，本頁只做本系統的開通 / 停用 / 重設密碼；密碼欄與重設密碼需 Enzo 端配合。
+        <span className="gox-mockup-strong">master 在 Enzo</span>：農友主檔資料唯讀，本頁只做本系統的開通 / 停用 / 重設密碼 / 提早出貨資格。
       </div>
 
       <div className="gox-card">
@@ -60,6 +70,7 @@ export default function Accounts() {
                 <th>帳號(手機)</th>
                 <th>產地</th>
                 <th>狀態</th>
+                <th className="cell-center">提早出貨</th>
                 <th>最後登入</th>
                 <th className="cell-ops">操作</th>
               </tr>
@@ -71,6 +82,14 @@ export default function Accounts() {
                   <td>{f.phone}</td>
                   <td>{f.origin ?? '—'}</td>
                   <td><span className={`gox-tag ${STATUS_TAG[f.status]}`}>{f.status}</span></td>
+                  <td className="cell-center">
+                    <button
+                      className={`gox-switch ${f.earlyShip ? 'is-on' : ''}`}
+                      aria-label="提早出貨資格"
+                      title={f.earlyShip ? '已開放（點擊關閉）' : '未開放（點擊開放）'}
+                      onClick={() => toggleEarly(f)}
+                    />
+                  </td>
                   <td>{f.lastLogin ?? '從未登入'}</td>
                   <td className="cell-ops">
                     <button className="gox-btn-op" onClick={() => setDetail(f)}>詳情</button>
@@ -97,6 +116,7 @@ export default function Accounts() {
                 <tr><th>認證</th><td>{detail.cert ?? '—'}</td></tr>
                 <tr><th>銀行帳戶</th><td>{detail.bank ?? '—'}</td></tr>
                 <tr><th>LINE ID</th><td>{detail.lineId ?? '—'}</td></tr>
+                <tr><th>提早出貨資格</th><td>{farmers.find((f) => f.id === detail.id)?.earlyShip ? '已開放' : '未開放'}</td></tr>
                 <tr><th>最後登入</th><td>{detail.lastLogin ?? '從未登入'}</td></tr>
               </tbody>
             </table>
@@ -117,6 +137,23 @@ export default function Accounts() {
             <div className="gox-modal-actions">
               <button className="gox-btn gox-btn-default" onClick={() => setConfirmDisable(null)}>取消</button>
               <button className="gox-btn gox-btn-danger" onClick={() => { setAccountStatus(confirmDisable.id, '已停用'); flash(`已停用「${confirmDisable.farm}」`); setConfirmDisable(null) }}>確定停用</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 開放提早出貨二次確認 */}
+      {confirmEarly && (
+        <div className="gox-modal-overlay" onClick={() => setConfirmEarly(null)}>
+          <div className="gox-modal-box" style={{ minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+            <h4>開放提早出貨資格</h4>
+            <p>
+              確定開放「{confirmEarly.farm}」的提早出貨？開放後，此農友可在<strong>尚未到出貨時間</strong>時提早印單。
+              這是特定需求，請確認過再開放。
+            </p>
+            <div className="gox-modal-actions">
+              <button className="gox-btn gox-btn-default" onClick={() => setConfirmEarly(null)}>取消</button>
+              <button className="gox-btn gox-btn-primary" onClick={() => { setEarlyShip(confirmEarly.id, true); flash(`已開放「${confirmEarly.farm}」提早出貨`); setConfirmEarly(null) }}>確認開放</button>
             </div>
           </div>
         </div>

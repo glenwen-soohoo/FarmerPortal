@@ -39,7 +39,7 @@ function groupByProduct(list: Order[]): ProductGroup[] {
 function ProductCard({ g }: { g: ProductGroup }) {
   return (
     <div
-      className="rounded-card bg-white p-4"
+      className="w-2/3 rounded-card bg-white p-4"
       style={{ border: '1px solid #E5E1D8', boxShadow: '0 1px 3px rgba(43,43,38,0.06)' }}
     >
       <div className="flex items-baseline justify-between gap-2">
@@ -48,7 +48,8 @@ function ProductCard({ g }: { g: ProductGroup }) {
           合計 <span className="text-xl font-bold text-brand">{g.total}</span>
         </span>
       </div>
-      <div className="mt-3 space-y-1">
+      {/* 規格：分隔線 + 數量靠右 */}
+      <div className="mt-2 space-y-1">
         {g.specs.map((s) => (
           <div key={s.spec} className="flex items-baseline justify-between border-t border-line pt-1 text-base">
             <span className="text-ink2">{s.spec}</span>
@@ -62,22 +63,21 @@ function ProductCard({ g }: { g: ProductGroup }) {
 
 function Block({
   title,
-  accent,
+  tone,
   groups,
   emptyMsg,
 }: {
   title: string
-  accent: string
+  tone: 'shippable' | 'upcoming'
   groups: ProductGroup[]
   emptyMsg: string
 }) {
   const totalQty = groups.reduce((a, g) => a + g.total, 0)
+  const chipCls = tone === 'shippable' ? 'bg-brand' : 'bg-muted'
   return (
     <section>
       <div className="mb-3 flex items-baseline gap-3">
-        <span className="inline-block rounded px-3 py-1 text-lg font-bold text-white" style={{ background: accent }}>
-          {title}
-        </span>
+        <span className={`inline-block rounded px-3 py-1 text-lg font-bold text-white ${chipCls}`}>{title}</span>
         <span className="text-base text-ink2">
           {groups.length} 種產品 · 共 {totalQty} 件
         </span>
@@ -85,7 +85,7 @@ function Block({
       {groups.length === 0 ? (
         <div className="rounded-card border border-line bg-white px-4 py-8 text-center text-muted">{emptyMsg}</div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-5">
           {groups.map((g) => (
             <ProductCard key={g.product} g={g} />
           ))}
@@ -104,17 +104,14 @@ export default function UnshippedPreview() {
   const upcoming = groupByProduct(mine.filter((o) => isInUpcomingPage(o, today)))
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <p className="text-base text-ink2">依產品彙總目前未出貨的訂單數量，方便一次備貨。</p>
+    <div className="mx-auto max-w-5xl space-y-4">
+      <p className="text-lg text-ink2">依產品彙總目前未出貨的訂單數量，方便一次備貨。</p>
 
-      {/* 上：可出貨 */}
-      <Block title="可出貨" accent="#1F6E43" groups={shippable} emptyMsg="目前沒有可出貨的產品" />
-
-      {/* 明顯的分隔 */}
-      <div className="border-t-2 border-line" />
-
-      {/* 下：出貨預告 */}
-      <Block title="出貨預告" accent="#9E9E9E" groups={upcoming} emptyMsg="目前沒有預告中的產品" />
+      {/* 左右兩欄並排：左＝需出貨、右＝出貨預告 */}
+      <div className="grid grid-cols-2 items-start gap-6">
+        <Block title="需出貨" tone="shippable" groups={shippable} emptyMsg="目前沒有需出貨的產品" />
+        <Block title="出貨預告" tone="upcoming" groups={upcoming} emptyMsg="目前沒有預告中的產品" />
+      </div>
     </div>
   )
 }
