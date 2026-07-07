@@ -34,9 +34,10 @@ interface Props {
   mode: 'print' | 'early' // print=可出貨批次列印；early=出貨預告批次提早印單
   earlyEligible?: boolean // early 模式：有資格才顯示批次鈕、且個別卡可提早印單
   setNavLocked: (v: boolean) => void
+  today?: string // 傳給 OrderCard 判定「指定今日」
 }
 
-export default function ProductGroupList({ orders, mode, earlyEligible, setNavLocked }: Props) {
+export default function ProductGroupList({ orders, mode, earlyEligible, setNavLocked, today }: Props) {
   const { printOrder } = useStore()
   const groups = toGroups(orders)
 
@@ -144,6 +145,7 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
                   selectable={active}
                   selected={selected.has(o.id)}
                   onToggleSelect={() => toggle(o.id)}
+                  today={today}
                 />
               ))}
             </div>

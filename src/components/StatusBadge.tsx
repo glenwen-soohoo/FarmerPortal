@@ -5,7 +5,7 @@ const MAP: Record<JudgeStatus | ShipStatus, string> = {
   // 判定狀態
   尚未判定: '',
   AI判定完成: 'is-info',
-  'AI判定完成(低信心)': 'is-warning',
+  'AI判定完成(低信心)': 'is-danger',
   AI判定失敗: 'is-danger',
   人工修正判定: 'is-success',
   // 出貨狀態

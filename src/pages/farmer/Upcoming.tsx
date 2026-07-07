@@ -25,7 +25,7 @@ export default function Upcoming() {
       {filtered.length === 0 ? (
         <EmptyState message={list.length === 0 ? '目前沒有預告中的單' : '沒有符合篩選的單'} />
       ) : (
-        <ProductGroupList orders={filtered} mode="early" earlyEligible={earlyEligible} setNavLocked={setNavLocked} />
+        <ProductGroupList orders={filtered} mode="early" earlyEligible={earlyEligible} setNavLocked={setNavLocked} today={today} />
       )}
     </div>
   )

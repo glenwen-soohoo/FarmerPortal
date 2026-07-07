@@ -28,7 +28,7 @@ export default function Shippable() {
       {filtered.length === 0 ? (
         <EmptyState message="沒有符合篩選的單" />
       ) : (
-        <ProductGroupList orders={filtered} mode="print" setNavLocked={setNavLocked} />
+        <ProductGroupList orders={filtered} mode="print" setNavLocked={setNavLocked} today={today} />
       )}
     </div>
   )

@@ -18,6 +18,7 @@ interface Props {
   selectDisabled?: boolean // 此模式下該單不可勾選（如批次收貨時的非已印單）
   earlyEligible?: boolean // 有提早出貨資格：出貨預告的單可「提早印單」
   hideProduct?: boolean // 商品分組大卡片內：小卡不再顯示產品名 / 溫層（已在大卡標題）
+  today?: string // 測試日期 'YYYY-MM-DD'，用來判定指定出貨日是否為「今日」
 }
 
 function windowText(o: Order) {
@@ -25,7 +26,7 @@ function windowText(o: Order) {
   return o.shippableDate ?? '—'
 }
 
-export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect, selectDisabled, earlyEligible, hideProduct }: Props) {
+export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect, selectDisabled, earlyEligible, hideProduct, today }: Props) {
   const { printOrder, failOrder } = useStore()
   const [printing, setPrinting] = useState(false)
   const [printStep, setPrintStep] = useState<'preparing' | 'done'>('preparing')
@@ -40,6 +41,9 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   const shipped = order.shipStatus === '已出貨'
   const needsReprint = order.shipStatus === '改單待重印' || !!order.isUpdated
   const forced = !!order.forcedShipDate // 指定出貨
+  // 指定出貨日是否正好是「今日」（today 為 'YYYY-MM-DD'，forcedShipDate 為 'MM/DD'）
+  const todayMMDD = today ? `${today.slice(5, 7)}/${today.slice(8, 10)}` : null
+  const forcedIsToday = forced && order.forcedShipDate === todayMMDD
 
   // 群組容器內的一列：不用左邊色條 / 整列上色強調（見 #24 迭代）；狀態一律靠徽章表達。
   const rowCls = selectable && selected ? 'bg-mutedbg' : '' // 批次選中：中性淺底
@@ -83,7 +87,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
       <div className="min-w-0 flex-1">
         {forced && (
           <div className="mb-3 inline-flex items-center rounded-full bg-danger/10 px-4 py-1 text-lg font-bold text-danger">
-            指定今日出貨
+            {forcedIsToday ? '指定今日出貨' : `指定 ${order.forcedShipDate} 出貨`}
           </div>
         )}
         {needsReprint && (

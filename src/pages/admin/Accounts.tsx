@@ -57,10 +57,6 @@ export default function Accounts() {
         {msg && <span style={{ color: 'var(--gox-success)', fontSize: 13 }}>{msg}</span>}
       </div>
 
-      <div className="gox-mockup-notice">
-        <span className="gox-mockup-strong">master 在 Enzo</span>：農友主檔資料唯讀，本頁只做本系統的開通 / 停用 / 重設密碼 / 提早出貨資格。
-      </div>
-
       <div className="gox-card">
         <div className="gox-card-body is-table-padding">
           <table className="gox-table">
@@ -85,6 +81,7 @@ export default function Accounts() {
                   <td className="cell-center">
                     <button
                       className={`gox-switch ${f.earlyShip ? 'is-on' : ''}`}
+                      style={{ transform: 'scale(0.8)' }}
                       aria-label="提早出貨資格"
                       title={f.earlyShip ? '已開放（點擊關閉）' : '未開放（點擊開放）'}
                       onClick={() => toggleEarly(f)}

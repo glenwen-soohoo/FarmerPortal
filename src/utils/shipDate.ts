@@ -7,9 +7,11 @@ export function mmddToIso(mmdd: string): string {
   return `${YEAR}-${m}-${d}`
 }
 
-// 測試日期是否已達該單的出貨起始日（優先用 shipWindow 起日，否則 shippableDate）
+// 測試日期是否已達該單的出貨起始日。
+// 指定出貨日(forcedShipDate)優先：客人指定當天才出，所以指定日＝可出貨起始日；
+// 否則用 shipWindow 起日，再退回 shippableDate。
 export function isShipReached(order: Order, todayIso: string): boolean {
-  const start = order.shipWindow?.[0] ?? order.shippableDate
+  const start = order.forcedShipDate ?? order.shipWindow?.[0] ?? order.shippableDate
   if (!start) return true
   return todayIso >= mmddToIso(start)
 }

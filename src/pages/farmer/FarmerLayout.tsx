@@ -9,6 +9,8 @@ export interface FarmerOutletCtx {
   setNavLocked: (v: boolean) => void
   today: string
   earlyEligible: boolean
+  printerConnected: boolean
+  setPrinterConnected: (v: boolean) => void
 }
 
 const TITLES: Record<string, string> = {
@@ -17,15 +19,17 @@ const TITLES: Record<string, string> = {
   '/farmer/preview': '備貨總覽',
   '/farmer/history': '出貨紀錄',
   '/farmer/all': '所有訂單',
-  '/farmer/me': '設定',
+  '/farmer/printer': '印表機設定',
+  '/farmer/me': '我的設定',
 }
 
 // 「更多」收納的低頻分頁
-const MORE_ROUTES = ['/farmer/history', '/farmer/all', '/farmer/me']
+const MORE_ROUTES = ['/farmer/history', '/farmer/all', '/farmer/printer', '/farmer/me']
 const MORE_ITEMS = [
   { to: '/farmer/all', label: '所有訂單查詢' },
   { to: '/farmer/history', label: '出貨紀錄' },
-  { to: '/farmer/me', label: '設定 / 我的' },
+  { to: '/farmer/printer', label: '印表機設定' },
+  { to: '/farmer/me', label: '我的設定' },
 ]
 
 export default function FarmerLayout() {
@@ -42,7 +46,8 @@ export default function FarmerLayout() {
   const mine = orders.filter((o) => o.farmerId === currentFarmerId)
   const shippableCount = mine.filter((o) => isInShippablePage(o, today)).length
   const upcomingCount = mine.filter((o) => isInUpcomingPage(o, today)).length
-  const forcedTodayCount = mine.filter((o) => isInShippablePage(o, today) && !!o.forcedShipDate).length
+  const todayMMDD = `${today.slice(5, 7)}/${today.slice(8, 10)}`
+  const forcedTodayCount = mine.filter((o) => isInShippablePage(o, today) && o.forcedShipDate === todayMMDD).length
 
   const tabs = [
     { to: '/farmer/shippable', label: '需出貨', count: shippableCount },
@@ -99,7 +104,7 @@ export default function FarmerLayout() {
 
       {/* 內容區（單欄、獨立捲動、吃滿寬） */}
       <main className="flex-1 overflow-y-auto p-4">
-        <Outlet context={{ setNavLocked, today, earlyEligible } satisfies FarmerOutletCtx} />
+        <Outlet context={{ setNavLocked, today, earlyEligible, printerConnected, setPrinterConnected } satisfies FarmerOutletCtx} />
       </main>
 
       {/* 底部 Tab Bar（批次模式鎖定）。3 核心分頁 + 更多 */}

@@ -204,7 +204,7 @@ export default function Dashboard() {
                   <td>
                     <div>{o.variety || o.productName}</div>
                     <div style={{ color: 'var(--gox-text-muted)' }}>{o.spec} ×{o.qty}</div>
-                    <div style={{ marginTop: 2 }}><TempLayerTag layer={o.tempLayer} /></div>
+                    <div style={{ marginTop: 2 }}><TempLayerTag layer={o.tempLayer} small /></div>
                   </td>
                   <td>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>

@@ -7,11 +7,11 @@ const STYLE: Record<TempLayer, { bg: string; fg: string }> = {
   冷凍: { bg: '#E0EDEF', fg: '#0F6E7B' }, // 青
 }
 
-export default function TempLayerTag({ layer }: { layer: TempLayer }) {
+export default function TempLayerTag({ layer, small }: { layer: TempLayer; small?: boolean }) {
   const s = STYLE[layer]
   return (
     <span
-      className="whitespace-nowrap rounded-full px-2 py-0.5 text-sm font-bold"
+      className={`inline-block whitespace-nowrap rounded-full font-bold ${small ? 'px-1.5 text-xs' : 'px-2 py-0.5 text-sm'}`}
       style={{ background: s.bg, color: s.fg }}
     >
       {layer}
