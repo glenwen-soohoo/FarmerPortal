@@ -36,6 +36,21 @@ export function isInShippablePage(order: Order, todayIso: string): boolean {
   return timeBucket(order, todayIso) === 'shippable'
 }
 
+// 快到期：可出貨中、且今天距「出貨區間迄日」在 3 天內（含當天，尚未逾期）
+export function isNearDue(order: Order, todayIso: string): boolean {
+  const end = order.shipWindow?.[1]
+  if (!end || !isInShippablePage(order, todayIso)) return false
+  const diff = (new Date(mmddToIso(end)).getTime() - new Date(todayIso).getTime()) / 86400000
+  return diff >= 0 && diff <= 3
+}
+
+// 逾期未出：可出貨中、且今天已超過「出貨區間迄日」
+export function isOverdue(order: Order, todayIso: string): boolean {
+  const end = order.shipWindow?.[1]
+  if (!end || !isInShippablePage(order, todayIso)) return false
+  return todayIso > mmddToIso(end)
+}
+
 // 農友「出貨預告」頁應顯示：進行中但尚未達出貨起始日的單
 export function isInUpcomingPage(order: Order, todayIso: string): boolean {
   return timeBucket(order, todayIso) === 'upcoming'

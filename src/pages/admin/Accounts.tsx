@@ -71,8 +71,22 @@ export default function Accounts() {
         <h2 style={{ margin: 0, fontSize: 18 }}>
           農友帳號管理 <span style={{ color: 'var(--gox-text-muted)', fontSize: 14, fontWeight: 400 }}>共 {farmers.length} 筆</span>
         </h2>
-        {msg && <span style={{ color: 'var(--gox-success)', fontSize: 13 }}>{msg}</span>}
       </div>
+
+      {/* 頂部置中小彈窗（antd message 風格），自動消失 */}
+      {msg && (
+        <div
+          style={{
+            position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 2000,
+            background: '#fff', border: '1px solid #e6e6e6', borderRadius: 6,
+            boxShadow: '0 6px 20px rgba(0,0,0,.12)', padding: '10px 18px', fontSize: 14,
+            color: 'var(--gox-text)', display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
+          }}
+        >
+          <span style={{ color: 'var(--gox-success)', fontWeight: 700 }}>✓</span>
+          {msg}
+        </div>
+      )}
 
       <div className="gox-card">
         <div className="gox-card-body is-table-padding">
@@ -107,7 +121,6 @@ export default function Accounts() {
                   <td>{f.lastLogin ?? '從未登入'}</td>
                   <td className="cell-ops">
                     <button className="gox-btn-op" onClick={() => setDetail(f)}>詳情</button>
-                    <Actions f={f} />
                   </td>
                 </tr>
               ))}

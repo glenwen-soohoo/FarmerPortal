@@ -4,9 +4,11 @@ import { useStore } from '../store'
 import BigButton from './BigButton'
 import TempLayerTag from './TempLayerTag'
 import CleanRemark from './CleanRemark'
+import Tag from './Tag'
+import BtnLabel from './BtnLabel'
 import ConfirmDialog from './ConfirmDialog'
 import FailDialog from './FailDialog'
-import { EARLY_SHIP_WARNING } from '../utils/shipDate'
+import { EARLY_SHIP_WARNING, isNearDue, isOverdue } from '../utils/shipDate'
 
 interface Props {
   order: Order
@@ -44,6 +46,18 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   // 指定出貨日是否正好是「今日」（today 為 'YYYY-MM-DD'，forcedShipDate 為 'MM/DD'）
   const todayMMDD = today ? `${today.slice(5, 7)}/${today.slice(8, 10)}` : null
   const forcedIsToday = forced && order.forcedShipDate === todayMMDD
+  // 快到期 / 逾期：僅需出貨頁（非預告）
+  const nearDue = !upcoming && !!today && isNearDue(order, today)
+  const overdue = !upcoming && !!today && isOverdue(order, today)
+
+  // 時間相關標籤「互斥、一次一個」，優先序：逾期 > 指定出貨日 > 快到期
+  const timeTag: { tone: 'danger' | 'amber'; label: string } | null = overdue
+    ? { tone: 'danger', label: '逾期未出' }
+    : forced
+    ? { tone: 'danger', label: forcedIsToday ? '指定今日出貨' : `指定 ${order.forcedShipDate} 出貨` }
+    : nearDue
+    ? { tone: 'amber', label: '快到期' }
+    : null
 
   // 群組容器內的一列：不用左邊色條 / 整列上色強調（見 #24 迭代）；狀態一律靠徽章表達。
   const rowCls = selectable && selected ? 'bg-mutedbg' : '' // 批次選中：中性淺底
@@ -85,14 +99,12 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
     <div className={`flex items-stretch gap-4 p-5 ${rowCls}`} style={{ opacity: dimmed ? 0.45 : 1 }}>
       {/* 左：訂單資訊。順序依「對農友的重要性」：規格數量 → 出貨提醒 → 出貨日 → (收合)收件資訊 */}
       <div className="min-w-0 flex-1">
-        {forced && (
-          <div className="mb-3 inline-flex items-center rounded-full bg-danger/10 px-4 py-1 text-lg font-bold text-danger">
-            {forcedIsToday ? '指定今日出貨' : `指定 ${order.forcedShipDate} 出貨`}
-          </div>
-        )}
-        {needsReprint && (
-          <div className="mb-3 inline-flex items-center rounded-full bg-accent/15 px-4 py-1 text-lg font-bold text-amberink">
-            已更新，請重印
+        {(timeTag || needsReprint) && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {/* 時間相關標籤：互斥，一次只一個 */}
+            {timeTag && <Tag tone={timeTag.tone}>{timeTag.label}</Tag>}
+            {/* 更新重印：非時間標籤，可與時間標籤並存 */}
+            {needsReprint && <Tag tone="orange">已更新，請重印</Tag>}
           </div>
         )}
 
@@ -151,29 +163,40 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               <span className="ml-2 text-base font-normal text-ink2">{order.phone}</span>
             </div>
             <div className="mt-1 text-base text-ink2">{order.address}</div>
+            <div className="mt-1 text-base">
+              <span className="font-normal text-muted">出貨備註(給司機) </span>
+              <span className="text-ink">{order.shipRemark || '無'}</span>
+            </div>
           </div>
         )}
       </div>
 
       {/* 右：動作區。已出貨=唯讀無按鈕；批次勾選模式下隱藏 */}
       {!selectable && !shipped && (
-        <div className="flex w-40 shrink-0 flex-col gap-2">
-          {upcoming ? (
-            printed ? (
-              <>
-                {/* 已提早印單：印過但仍未到出貨時間（中性） */}
-                <div
-                  className="flex flex-1 flex-col items-center justify-center rounded bg-mutedbg text-center text-lg font-bold leading-snug text-muted"
-                  style={{ minHeight: 120 }}
-                >
-                  <span>已提早印單 ✓</span>
-                  <span className="text-sm font-normal">尚未到出貨時間</span>
-                </div>
-                <BigButton variant="danger" size="md" style={{ minHeight: 44, height: 44 }} onClick={() => setAskFail(true)}>
-                  無法出貨
-                </BigButton>
-              </>
-            ) : earlyEligible ? (
+        <div className="oc-action flex shrink-0 flex-col gap-2">
+          {printed ? (
+            <>
+              {/* 已印單（含提早印單）：重印＝綠框、追加補單＝黃框，皆撐滿高度；無法出貨壓最底 */}
+              <button
+                onClick={onPrintClick}
+                className="flex-1 rounded border-2 border-brand text-xl font-bold text-brand active:bg-brand/5"
+                style={{ minHeight: 60 }}
+              >
+                <BtnLabel parts={['重印', '相同貨單']} />
+              </button>
+              <button
+                onClick={() => setAskSupplement(true)}
+                className="flex-1 rounded border-2 border-accent text-xl font-bold text-amberink active:bg-accent/5"
+                style={{ minHeight: 60 }}
+              >
+                <BtnLabel parts={['多箱', '追加補單']} />
+              </button>
+              <BigButton variant="danger" size="md" className="oc-fail" style={{ minHeight: 44, height: 44 }} onClick={() => setAskFail(true)}>
+                無法出貨
+              </BigButton>
+            </>
+          ) : upcoming ? (
+            earlyEligible ? (
               <>
                 {/* 有提早出貨資格：提早印單＝此頁主要動作，用主色綠（按下先跳警告） */}
                 <button
@@ -181,7 +204,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
                   className="flex-1 rounded bg-brand text-2xl font-bold text-white active:bg-brand-dark"
                   style={{ minHeight: 120 }}
                 >
-                  提早印單
+                  <BtnLabel parts={['提早', '印單']} />
                 </button>
                 <BigButton variant="danger" size="md" style={{ minHeight: 44, height: 44 }} onClick={() => setAskFail(true)}>
                   無法出貨
@@ -201,19 +224,6 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
                 </BigButton>
               </>
             )
-          ) : printed ? (
-            <>
-              {/* 已印單：主要動作已完成 → 重印 / 補單降為次級 outline，無法出貨壓最底 */}
-              <BigButton variant="secondary" size="md" style={{ minHeight: 60 }} onClick={onPrintClick}>
-                重印相同貨單
-              </BigButton>
-              <BigButton variant="secondary" size="md" style={{ minHeight: 60 }} onClick={() => setAskSupplement(true)}>
-                多箱追加補單
-              </BigButton>
-              <BigButton variant="danger" size="md" style={{ minHeight: 44, height: 44 }} onClick={() => setAskFail(true)}>
-                無法出貨
-              </BigButton>
-            </>
           ) : (
             <>
               {/* 未印：印單＝唯一主鈕，最大最醒目 */}
@@ -224,7 +234,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               >
                 印單
               </button>
-              <BigButton variant="danger" size="md" style={{ minHeight: 44, height: 44 }} onClick={() => setAskFail(true)}>
+              <BigButton variant="danger" size="md" className="oc-fail" style={{ minHeight: 44, height: 44 }} onClick={() => setAskFail(true)}>
                 無法出貨
               </BigButton>
             </>

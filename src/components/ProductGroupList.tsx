@@ -104,7 +104,7 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
             }}
           >
             {/* 左側：白底商品欄（撐滿群組高度標示分組；商品名 sticky，捲動仍看得到） */}
-            <aside className="w-[264px] shrink-0 rounded-l-card border-r border-line bg-white">
+            <aside className="oc-aside shrink-0 rounded-l-card border-r border-line bg-white">
               <div className="sticky top-0 p-4">
                 <div className="text-3xl font-bold leading-tight text-ink">{g.product}</div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">

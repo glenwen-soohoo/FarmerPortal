@@ -42,6 +42,7 @@ export interface Order {
   tempLayer: TempLayer
   rawRemark: string // 原始主單備註（客人母單原文，唯讀）
   cleanRemark: string // 給農友備註（AI 清洗+分段後）
+  shipRemark?: string // 出貨備註（印在貨單上、給司機 / 物流看）
   variety?: string // AI 清洗後品種名
   judgeStatus: JudgeStatus
   shipStatus: ShipStatus

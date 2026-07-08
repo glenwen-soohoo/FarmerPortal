@@ -38,6 +38,17 @@ body {
   line-height: 1.6;
 }
 
+/* 需出貨 / 出貨預告卡片：商品名欄與印單鈕欄寬度；<960 時縮到 2/3，中間資訊撐滿多出空間 */
+.oc-aside { width: 264px; }
+.oc-action { width: 160px; }
+/* 無法出貨：一律不換行；窄版縮字避免超出 */
+.oc-fail { white-space: nowrap; }
+@media (max-width: 959px) {
+  .oc-aside { width: 176px; }
+  .oc-action { width: 108px; }
+  .oc-fail { font-size: 0.8rem; padding-left: 6px; padding-right: 6px; }
+}
+
 /* 後台基礎字級 14px */
 .admin-scope {
   font-size: 14px;

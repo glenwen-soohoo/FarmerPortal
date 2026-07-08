@@ -9,7 +9,6 @@ export const FONT_LEVELS = [
   { label: '小', px: 14 },
   { label: '預設', px: 16 },
   { label: '大', px: 18 },
-  { label: '特大', px: 20 },
 ]
 
 // 給子頁用：鎖住底部分頁（批次模式）、開發用測試日期、提早出貨資格、印表機、字體大小
@@ -83,7 +82,7 @@ export default function FarmerLayout() {
   }
 
   return (
-    <div className="farmer-scope flex h-screen flex-col overflow-hidden bg-canvas">
+    <div className="farmer-scope flex h-dvh flex-col overflow-hidden bg-canvas">
       {/* 頂部薄 header：頁名 + 印表機連線燈（用影子與內容區分隔） */}
       <header
         className="relative z-10 flex shrink-0 items-center justify-between border-b border-line bg-white px-5 py-3"
@@ -118,7 +117,7 @@ export default function FarmerLayout() {
       </header>
 
       {/* 內容區（獨立捲動）。內層限寬 960px（60rem，隨字體縮放）、置中 */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="relative mx-auto w-full p-4" style={{ maxWidth: '60rem' }}>
           {/* 批次模式：半透明深色遮罩罩住「選中商品以外」的內容（隨內容捲動、不蓋 header/選單） */}
           {navLocked && <div className="absolute inset-0 z-30" style={{ background: 'rgba(43,43,38,0.55)' }} aria-hidden />}

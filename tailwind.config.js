@@ -25,8 +25,11 @@ export default {
           dark: '#18583A',
         },
         danger: '#C0392B', // 今日 / 急：指定今日、無法出貨
-        accent: '#D99A2B', // 有異動：改單重印、出貨提醒
+        accent: '#D99A2B', // 黃：出貨提醒、快到期、追加補單
         amberink: '#8A5A12', // 琥珀標籤的深字色（淺琥珀底上可讀）
+        orange: '#DE6A1B', // 橘：改單待重印
+        orangeink: '#9A4A0E', // 橘標籤的深字色
+        orangebg: '#FBE9D9', // 橘標籤淺底
         // 後台 admin
         admin: {
           primary: '#409eff',

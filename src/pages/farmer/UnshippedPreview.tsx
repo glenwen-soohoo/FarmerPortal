@@ -39,7 +39,7 @@ function groupByProduct(list: Order[]): ProductGroup[] {
 function ProductCard({ g }: { g: ProductGroup }) {
   return (
     <div
-      className="w-2/3 rounded-card bg-white p-4"
+      className="mx-auto w-2/3 rounded-card bg-white p-4"
       style={{ border: '1px solid #E5E1D8', boxShadow: '0 1px 3px rgba(43,43,38,0.06)' }}
     >
       <div className="flex items-baseline justify-between gap-2">
@@ -108,7 +108,7 @@ export default function UnshippedPreview() {
       <p className="text-lg text-ink2">依產品彙總目前未出貨的訂單數量，方便一次備貨。</p>
 
       {/* 左右兩欄並排：左＝需出貨、右＝出貨預告 */}
-      <div className="grid grid-cols-2 items-start gap-6">
+      <div className="grid grid-cols-2 items-start gap-10">
         <Block title="需出貨" tone="shippable" groups={shippable} emptyMsg="目前沒有需出貨的產品" />
         <Block title="出貨預告" tone="upcoming" groups={upcoming} emptyMsg="目前沒有預告中的產品" />
       </div>
