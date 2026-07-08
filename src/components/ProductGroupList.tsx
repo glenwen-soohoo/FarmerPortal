@@ -82,8 +82,9 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
   const confirmLabel = mode === 'early' ? '提早列印勾選' : '列印勾選'
 
   return (
-    <div className="space-y-6">
-      {groups.map((g) => {
+    <>
+      <div className="space-y-6">
+        {groups.map((g) => {
         const active = batchProduct === g.product
         const otherActive = batchProduct !== null && !active
         const allSelected = active && g.orders.length > 0 && g.orders.every((o) => selected.has(o.id))
@@ -94,7 +95,13 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
           <section
             key={g.product}
             className={`flex rounded-card border bg-white ${active ? 'border-brand' : 'border-line'}`}
-            style={{ borderWidth: active ? 2 : 1, boxShadow: '0 1px 3px rgba(43,43,38,0.08)' }}
+            style={{
+              borderWidth: active ? 2 : 1,
+              boxShadow: '0 1px 3px rgba(43,43,38,0.08)',
+              // 選中的商品拉到遮罩之上（其餘 section 在遮罩之下被罩住）
+              position: active ? 'relative' : undefined,
+              zIndex: active ? 40 : undefined,
+            }}
           >
             {/* 左側：白底商品欄（撐滿群組高度標示分組；商品名 sticky，捲動仍看得到） */}
             <aside className="w-[264px] shrink-0 rounded-l-card border-r border-line bg-white">
@@ -120,7 +127,7 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
                     <BigButton size="md" variant="secondary" onClick={toggleAll}>
                       {allSelected ? '取消全選' : '全選'}
                     </BigButton>
-                    <BigButton size="md" variant="secondary" onClick={cancel}>
+                    <BigButton size="md" variant="danger" onClick={cancel}>
                       取消
                     </BigButton>
                   </>
@@ -175,6 +182,7 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }

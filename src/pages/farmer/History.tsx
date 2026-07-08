@@ -11,7 +11,7 @@ export default function History() {
 
   return (
     <div>
-      <div className="mx-auto mb-4 max-w-2xl">
+      <div className="mb-4 ml-auto w-full max-w-sm">
         {filterButton}
         {filterPanel}
       </div>

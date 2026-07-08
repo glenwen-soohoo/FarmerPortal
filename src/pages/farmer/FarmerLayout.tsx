@@ -1,16 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store'
 import DevPanel from '../../dev/DevPanel'
 import { DEFAULT_DEV_TODAY, isInShippablePage, isInUpcomingPage } from '../../utils/shipDate'
 
-// 給子頁用：鎖住底部分頁（批次模式）、開發用測試日期、提早出貨資格
+// 字體大小級距：預設 16px，可調小一級、調大兩級（rem 基準，內容區塊會等比縮放）
+export const FONT_LEVELS = [
+  { label: '小', px: 14 },
+  { label: '預設', px: 16 },
+  { label: '大', px: 18 },
+  { label: '特大', px: 20 },
+]
+
+// 給子頁用：鎖住底部分頁（批次模式）、開發用測試日期、提早出貨資格、印表機、字體大小
 export interface FarmerOutletCtx {
   setNavLocked: (v: boolean) => void
   today: string
   earlyEligible: boolean
   printerConnected: boolean
   setPrinterConnected: (v: boolean) => void
+  fontPx: number
+  setFontPx: (v: number) => void
 }
 
 const TITLES: Record<string, string> = {
@@ -42,6 +52,15 @@ export default function FarmerLayout() {
   const [printerConnected, setPrinterConnected] = useState(true)
   const [earlyEligible, setEarlyEligible] = useState<boolean>(me?.earlyShip ?? true)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [fontPx, setFontPx] = useState(16)
+
+  // 調整 <html> 基準字級 → 農友端所有 rem 文字/間距/寬度等比縮放；離開農友端還原
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fontPx}px`
+    return () => {
+      document.documentElement.style.fontSize = ''
+    }
+  }, [fontPx])
 
   const mine = orders.filter((o) => o.farmerId === currentFarmerId)
   const shippableCount = mine.filter((o) => isInShippablePage(o, today)).length
@@ -65,8 +84,11 @@ export default function FarmerLayout() {
 
   return (
     <div className="farmer-scope flex h-screen flex-col overflow-hidden bg-canvas">
-      {/* 頂部薄 header：頁名 + 印表機連線燈 */}
-      <header className="flex shrink-0 items-center justify-between border-b border-line bg-white px-5 py-3">
+      {/* 頂部薄 header：頁名 + 印表機連線燈（用影子與內容區分隔） */}
+      <header
+        className="relative z-10 flex shrink-0 items-center justify-between border-b border-line bg-white px-5 py-3"
+        style={{ boxShadow: '0 3px 8px rgba(43,43,38,0.08)' }}
+      >
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-ink">{pageTitle}</h1>
           {loc.pathname === '/farmer/shippable' && forcedTodayCount > 0 && (
@@ -95,22 +117,21 @@ export default function FarmerLayout() {
         </button>
       </header>
 
-      {/* 批次模式提示條：鎖分頁時提醒農友「不是當機」 */}
-      {navLocked && (
-        <div className="shrink-0 bg-brand px-5 py-2 text-center text-base font-bold text-white">
-          批次列印中，完成或按「取消」後即可切換頁面
+      {/* 內容區（獨立捲動）。內層限寬 960px（60rem，隨字體縮放）、置中 */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="relative mx-auto w-full p-4" style={{ maxWidth: '60rem' }}>
+          {/* 批次模式：半透明深色遮罩罩住「選中商品以外」的內容（隨內容捲動、不蓋 header/選單） */}
+          {navLocked && <div className="absolute inset-0 z-30" style={{ background: 'rgba(43,43,38,0.55)' }} aria-hidden />}
+          <Outlet
+            context={{ setNavLocked, today, earlyEligible, printerConnected, setPrinterConnected, fontPx, setFontPx } satisfies FarmerOutletCtx}
+          />
         </div>
-      )}
-
-      {/* 內容區（單欄、獨立捲動、吃滿寬） */}
-      <main className="flex-1 overflow-y-auto p-4">
-        <Outlet context={{ setNavLocked, today, earlyEligible, printerConnected, setPrinterConnected } satisfies FarmerOutletCtx} />
       </main>
 
       {/* 底部 Tab Bar（批次模式鎖定）。3 核心分頁 + 更多 */}
       <nav
-        className="relative flex shrink-0 border-t border-line bg-white"
-        style={navLocked ? { pointerEvents: 'none', opacity: 0.4 } : undefined}
+        className="relative z-10 flex shrink-0 border-t border-line bg-white"
+        style={{ boxShadow: '0 -3px 8px rgba(43,43,38,0.08)', ...(navLocked ? { pointerEvents: 'none' } : {}) }}
       >
         {tabs.map((t) => (
           <NavLink
@@ -119,7 +140,7 @@ export default function FarmerLayout() {
             onClick={() => setMoreOpen(false)}
             className={({ isActive }) =>
               `flex flex-1 flex-row items-center justify-center gap-2 whitespace-nowrap text-xl font-bold ${
-                isActive ? 'bg-brand text-white' : 'text-ink2'
+                navLocked ? 'text-muted' : isActive ? 'bg-brand text-white' : 'text-ink2'
               }`
             }
             style={{ minHeight: 64 }}
@@ -133,7 +154,7 @@ export default function FarmerLayout() {
         <button
           onClick={() => setMoreOpen((v) => !v)}
           className={`flex flex-1 flex-row items-center justify-center gap-2 whitespace-nowrap text-xl font-bold ${
-            moreActive ? 'bg-brand text-white' : moreOpen ? 'text-brand' : 'text-ink2'
+            navLocked ? 'text-muted' : moreActive ? 'bg-brand text-white' : moreOpen ? 'text-brand' : 'text-ink2'
           }`}
           style={{ minHeight: 64 }}
         >

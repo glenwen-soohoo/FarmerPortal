@@ -135,13 +135,13 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             e.stopPropagation()
             setShowRecipient((v) => !v)
           }}
-          className="mt-3 inline-flex items-center gap-1 rounded border-2 border-line bg-white px-3 py-1.5 text-base font-medium text-ink active:bg-mutedbg"
+          className="mt-3 inline-flex items-center gap-1 rounded bg-mutedbg px-3 py-1.5 text-base font-medium text-ink active:opacity-80"
         >
           {showRecipient ? '收合收件資訊' : '顯示收件資訊'}
           <span className="text-ink2">{showRecipient ? '▴' : '▾'}</span>
         </button>
         {showRecipient && (
-          <div className="mt-2 border-t border-line pt-2">
+          <div className="mt-2">
             <div className="text-base">
               <span className="font-normal text-muted">訂單編號 </span>
               <span className="font-bold text-ink">{order.orderNumber}</span>

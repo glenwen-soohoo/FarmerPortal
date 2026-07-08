@@ -32,9 +32,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 農友端基礎字級：8.7 吋小平板 + 年長使用者，上調到 20px */
+/* 農友端基礎字級：1.25rem（≈20px），改用 rem 讓「我的設定」字體大小可整體縮放 */
 .farmer-scope {
-  font-size: 20px;
+  font-size: 1.25rem;
   line-height: 1.6;
 }
 

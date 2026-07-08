@@ -21,7 +21,7 @@ export default function Shippable() {
 
   return (
     <div>
-      <div className="mb-4">
+      <div className="mb-4 ml-auto w-full max-w-sm">
         {filterButton}
         {filterPanel}
       </div>

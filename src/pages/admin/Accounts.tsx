@@ -14,11 +14,28 @@ export default function Accounts() {
   const [detail, setDetail] = useState<Farmer | null>(null)
   const [confirmDisable, setConfirmDisable] = useState<Farmer | null>(null)
   const [confirmEarly, setConfirmEarly] = useState<Farmer | null>(null)
+  const [resetPwd, setResetPwd] = useState<Farmer | null>(null)
+  const [pwd, setPwd] = useState('')
+  const [pwd2, setPwd2] = useState('')
+  const [pwdErr, setPwdErr] = useState('')
   const [msg, setMsg] = useState('')
 
   const flash = (m: string) => {
     setMsg(m)
     window.setTimeout(() => setMsg(''), 2500)
+  }
+
+  const openReset = (f: Farmer) => {
+    setResetPwd(f)
+    setPwd('')
+    setPwd2('')
+    setPwdErr('')
+  }
+  const doReset = () => {
+    if (pwd.length < 4) return setPwdErr('密碼至少 4 碼')
+    if (pwd !== pwd2) return setPwdErr('兩次輸入的密碼不一致')
+    flash(`已重設「${resetPwd!.farm}」的密碼`)
+    setResetPwd(null)
   }
 
   // 提早出貨：開放需確認；關閉可直接關
@@ -39,7 +56,7 @@ export default function Accounts() {
       {f.status === '已開通' && (
         <>
           <button className="gox-btn-op" onClick={() => setConfirmDisable(f)}>停用</button>
-          <button className="gox-btn-op" onClick={() => flash(`已發送重設密碼連結給「${f.farm}」（示意）`)}>重設密碼</button>
+          <button className="gox-btn-op" onClick={() => openReset(f)}>重設密碼</button>
         </>
       )}
       {f.status === '已停用' && (
@@ -134,6 +151,31 @@ export default function Accounts() {
             <div className="gox-modal-actions">
               <button className="gox-btn gox-btn-default" onClick={() => setConfirmDisable(null)}>取消</button>
               <button className="gox-btn gox-btn-danger" onClick={() => { setAccountStatus(confirmDisable.id, '已停用'); flash(`已停用「${confirmDisable.farm}」`); setConfirmDisable(null) }}>確定停用</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 重設密碼（後台直接設定，不走發信） */}
+      {resetPwd && (
+        <div className="gox-modal-overlay" onClick={() => setResetPwd(null)}>
+          <div className="gox-modal-box" style={{ minWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+            <h4>重設密碼　<span style={{ color: 'var(--gox-text-muted)', fontWeight: 400, fontSize: 14 }}>{resetPwd.farm}（{resetPwd.phone}）</span></h4>
+            <div className="gox-form-row">
+              <label>新密碼</label>
+              <input className="gox-input" type="password" style={{ flex: 1 }} value={pwd}
+                onChange={(e) => { setPwd(e.target.value); setPwdErr('') }} placeholder="至少 4 碼" />
+            </div>
+            <div className="gox-form-row">
+              <label>確認密碼</label>
+              <input className="gox-input" type="password" style={{ flex: 1 }} value={pwd2}
+                onChange={(e) => { setPwd2(e.target.value); setPwdErr('') }}
+                onKeyDown={(e) => e.key === 'Enter' && doReset()} placeholder="再輸入一次" />
+            </div>
+            {pwdErr && <p style={{ color: 'var(--gox-danger)', fontSize: 13, margin: '4px 0 0' }}>{pwdErr}</p>}
+            <div className="gox-modal-actions">
+              <button className="gox-btn gox-btn-default" onClick={() => setResetPwd(null)}>取消</button>
+              <button className="gox-btn gox-btn-primary" onClick={doReset}>確認重設</button>
             </div>
           </div>
         </div>

@@ -163,12 +163,13 @@
 .gox-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .18s ease; }
 .gox-switch.is-on::after { transform: translateX(18px); }
 .gox-tag { display: inline-block; padding: 2px 8px; border-radius: var(--gox-radius); font-size: var(--gox-font-size-xs); font-weight: 600; background: #f0f0f0; color: var(--gox-text-sub); border: 1px solid #e0e0e0; white-space: nowrap; }
-.gox-tag.is-success { background: #f6ffed; color: #389e0d; border-color: #b7eb8f; }
-.gox-tag.is-info { background: #e6f4ff; color: #0958d9; border-color: #91caff; }
-.gox-tag.is-warning { background: #fffbe6; color: #d4b106; border-color: #ffe58f; }
+/* 標籤彩度調低（參考農友端常溫/冷藏淺底色系）；紅色維持原本警示強度 */
+.gox-tag.is-success { background: #e6f0e8; color: #1f6e43; border-color: #cfe3d4; }
+.gox-tag.is-info { background: #e1ecf7; color: #1e6fa8; border-color: #cbddef; }
+.gox-tag.is-warning { background: #fbf0dd; color: #8a5a12; border-color: #ecdcb6; }
 .gox-tag.is-danger { background: #fff1f0; color: var(--gox-danger); border-color: #ffccc7; }
-.gox-tag.is-frozen { background: #e6f4ff; color: #0958d9; border-color: #91caff; }
-.gox-tag.is-ambient { background: #f6ffed; color: #389e0d; border-color: #b7eb8f; }
+.gox-tag.is-frozen { background: #e0edef; color: #0f6e7b; border-color: #c7e0e3; }
+.gox-tag.is-ambient { background: #e6f0e8; color: #1f6e43; border-color: #cfe3d4; }
 
 /* ── icon button ── */
 .gox-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; background: transparent; border: 1px solid transparent; border-radius: var(--gox-radius); cursor: pointer; color: var(--gox-text-sub); font-size: 12px; font-family: inherit; transition: all .15s; }
