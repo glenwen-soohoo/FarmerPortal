@@ -38,6 +38,19 @@ body {
   line-height: 1.6;
 }
 
+/* ── 暗示性進場動畫（彈窗 / 展開收合）：淡入 + 輕微位移/縮放，讓切換不生硬 ── */
+@keyframes gbFade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes gbPop { from { opacity: 0; transform: translateY(8px) scale(0.97) } to { opacity: 1; transform: none } }
+@keyframes gbSlideDown { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: none } }
+@keyframes gbSlideUp { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+.anim-fade { animation: gbFade .18s ease-out both; }
+.anim-pop { animation: gbPop .2s cubic-bezier(.2, .8, .2, 1) both; }
+.anim-slide-down { animation: gbSlideDown .18s ease-out both; }
+.anim-slide-up { animation: gbSlideUp .2s cubic-bezier(.2, .8, .2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade, .anim-pop, .anim-slide-down, .anim-slide-up { animation: none; }
+}
+
 /* 需出貨 / 出貨預告卡片：商品名欄與印單鈕欄寬度；<960 時縮到 2/3，中間資訊撐滿多出空間 */
 .oc-aside { width: 264px; }
 .oc-action { width: 160px; }
@@ -47,6 +60,61 @@ body {
   .oc-aside { width: 176px; }
   .oc-action { width: 108px; }
   .oc-fail { font-size: 0.8rem; padding-left: 6px; padding-right: 6px; }
+}
+/* 備貨總覽：桌機兩欄並排（卡片 2/3）；<960 卡片加寬到滿欄；手機再改單欄 */
+.preview-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 2.5rem; }
+@media (max-width: 959px) {
+  .preview-card { width: 100%; }
+}
+@media (max-width: 559px) {
+  .preview-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+}
+
+/* 手機版 <560：改為上下堆疊——商品名當頂列(sticky)、資訊滿版、按鈕移到卡片下方橫排 */
+@media (max-width: 559px) {
+  .pg-section { flex-direction: column; }
+  .oc-aside {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid #e5e1d8;
+    border-radius: 8px 8px 0 0;
+    /* 商品名頂列黏頁：捲動卡片時仍看得到目前是哪個商品 */
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  /* 商品資訊靠左、批次列印鈕靠右 */
+  .pg-aside-inner {
+    position: static;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .pg-aside-batch { margin-top: 0; flex-shrink: 0; }
+
+  .oc-row { flex-direction: column; }
+  /* 批次勾選：手機版移到右下，份數在勾選框左側（row-reverse：DOM 勾選框在前→靠右） */
+  .oc-select {
+    flex-direction: row-reverse;
+    align-items: center;
+    align-self: flex-end;
+  }
+  /* 手機版份數改水平（DOM ＋/數字/−）→ row-reverse 顯示為 −/數字/＋ */
+  .oc-stepper { flex-direction: row-reverse; }
+  /* row-reverse：無法出貨(DOM 最後)移到左邊，印單(主要動作)留右邊給右手拇指 */
+  .oc-action {
+    width: 100%;
+    flex-direction: row-reverse;
+    flex-wrap: wrap;
+  }
+  /* 印單等主要動作佔比大，無法出貨小 */
+  .oc-action > * {
+    flex: 2 1 0;
+    min-height: 3rem !important;
+    height: auto !important;
+  }
+  .oc-action > .oc-fail { flex: 1 1 0; }
 }
 
 /* 後台基礎字級 14px */

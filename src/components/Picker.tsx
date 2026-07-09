@@ -46,12 +46,12 @@ export function Picker({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="anim-fade fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ background: 'rgba(43,43,38,0.4)' }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-white"
+        className="anim-pop w-full max-w-md rounded-2xl bg-white"
         style={{ maxHeight: '80vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -12,7 +12,7 @@ const SHIP_OPTIONS: ShipStatus[] = [
 const FIELD_LABEL: Record<string, string> = {
   variety: '清洗品種名', shipWindow: '預定出貨區間', blockedDates: '不可出貨日',
   forcedShipDate: '指定出貨日', remoteAgentCode: '偏遠客代',
-  cleanRemark: '給農友備註', rawRemark: '原始主單備註', shipStatus: '出貨狀態', judgeStatus: '判定狀態',
+  farmerRemark: '給農友備註', driverRemark: '出貨備註(司機)', rawRemark: '原始主單備註', shipStatus: '出貨狀態', judgeStatus: '判定狀態',
 }
 
 // MM/DD ↔ YYYY-MM-DD（mock 統一 2026 年，供 <input type=date> 用）
@@ -54,7 +54,8 @@ export default function OrderDetail() {
   const [winFrom, setWinFrom] = useState(toISO(o?.shipWindow?.[0]))
   const [winTo, setWinTo] = useState(toISO(o?.shipWindow?.[1]))
   const [blocked, setBlocked] = useState<BItem[]>(parseBlocked(o?.blockedDates))
-  const [note, setNote] = useState(o?.cleanRemark ?? '')
+  const [note, setNote] = useState(o?.farmerRemark ?? '')
+  const [driverRemark, setDriverRemark] = useState(o?.driverRemark ?? '')
   const [shipStatus, setShipStatus] = useState<ShipStatus>(o?.shipStatus ?? '未達出貨時間')
   const [forcedShip, setForcedShip] = useState(toISO(o?.forcedShipDate))
   const [err, setErr] = useState('')
@@ -86,7 +87,8 @@ export default function OrderDetail() {
     setErr('')
     const patch: Partial<Order> = {
       variety,
-      cleanRemark: note,
+      farmerRemark: note,
+      driverRemark,
       blockedDates: serializeBlocked(blocked),
       shipStatus,
       forcedShipDate: forcedShip ? fromISO(forcedShip) : '',
@@ -154,7 +156,8 @@ export default function OrderDetail() {
             />
             <Field label="農友印單日" value={o.printedAt || <span style={{ color: 'var(--gox-text-muted)' }}>尚未印單</span>} />
             {o.failReason && <Field label="無法出貨原因" value={o.failReason} />}
-            <Field label="給農友備註" value={o.cleanRemark || <span style={{ color: 'var(--gox-text-muted)' }}>（AI 未產生，建議改單補上）</span>} />
+            <Field label="給農友備註" value={o.farmerRemark || <span style={{ color: 'var(--gox-text-muted)' }}>（AI 未產生，建議改單補上）</span>} />
+            <Field label="出貨備註(司機)" value={o.driverRemark || <span style={{ color: 'var(--gox-text-muted)' }}>—</span>} />
 
             <div style={{ margin: '8px 0', borderTop: '1px solid var(--gox-card-border)' }} />
 
@@ -240,6 +243,11 @@ export default function OrderDetail() {
             <div className="gox-form-row">
               <label>給農友備註</label>
               <input className="gox-input" style={{ flex: 1, minWidth: 160 }} value={note} onChange={(e) => setNote(e.target.value)} />
+            </div>
+
+            <div className="gox-form-row" style={{ alignItems: 'flex-start' }}>
+              <label>出貨備註(司機)</label>
+              <textarea className="gox-textarea" style={{ flex: 1, minWidth: 160 }} placeholder="給黑貓司機的配送備註（如：大門進、電聯管理室）" value={driverRemark} onChange={(e) => setDriverRemark(e.target.value)} />
             </div>
 
             <div className="gox-form-row">

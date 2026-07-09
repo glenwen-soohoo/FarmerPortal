@@ -41,7 +41,6 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         patch(id, (o) => ({
           ...o,
           shipStatus: '已印單',
-          isUpdated: false,
           printedAt: new Date().toLocaleString('zh-TW'),
         })),
       shipOrder: (id) => patch(id, (o) => ({ ...o, shipStatus: '已出貨' })),
@@ -70,12 +69,12 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         }),
       bindProduct: (productId, farmerId) =>
         setProducts((prev) =>
-          prev.map((p) => (p.id === productId ? { ...p, boundFarmerId: farmerId } : p))
+          prev.map((p) => (p.id === productId ? { ...p, farmerId } : p))
         ),
       setAccountStatus: (farmerId, status) =>
         setFarmers((prev) => prev.map((f) => (f.id === farmerId ? { ...f, status } : f))),
       setEarlyShip: (farmerId, allow) =>
-        setFarmers((prev) => prev.map((f) => (f.id === farmerId ? { ...f, earlyShip: allow } : f))),
+        setFarmers((prev) => prev.map((f) => (f.id === farmerId ? { ...f, earlyShipAllowed: allow } : f))),
     }),
     [orders, farmers, products]
   )
@@ -89,14 +88,14 @@ export function useStore() {
   return v
 }
 
-// 可出貨排序：① 指定假日 ② 指定平日 ③ 盒數多 ④ 有備註往後 ⑤ 訂單號
+// 可出貨排序：① 僅假日 ② 僅平日 ③ 盒數多 ④ 有備註往後 ⑤ 訂單號
 export function sortShippable(list: Order[]): Order[] {
+  const prefRank = (o: Order) => (o.deliveryDayPref === '僅假日' ? 0 : o.deliveryDayPref === '僅平日' ? 1 : 2)
   return [...list].sort((a, b) => {
-    if (!!b.isWeekendPref !== !!a.isWeekendPref) return b.isWeekendPref ? 1 : -1
-    if (!!b.isWeekdayPref !== !!a.isWeekdayPref) return b.isWeekdayPref ? 1 : -1
+    if (prefRank(a) !== prefRank(b)) return prefRank(a) - prefRank(b)
     if (b.qty !== a.qty) return b.qty - a.qty
-    const aHas = a.cleanRemark.trim().length > 0
-    const bHas = b.cleanRemark.trim().length > 0
+    const aHas = a.farmerRemark.trim().length > 0
+    const bHas = b.farmerRemark.trim().length > 0
     if (aHas !== bHas) return aHas ? 1 : -1
     return a.orderNumber.localeCompare(b.orderNumber)
   })

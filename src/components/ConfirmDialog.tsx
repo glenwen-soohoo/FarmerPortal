@@ -22,12 +22,12 @@ export default function ConfirmDialog({
 }: Props) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.4)' }}
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-md rounded-card bg-white p-6"
+        className="anim-pop w-full max-w-md rounded-card bg-white p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-2xl font-bold text-ink">{title}</h3>

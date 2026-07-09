@@ -40,7 +40,7 @@ export function useListFilter(orders: Order[]): {
 
   const filtered = orders.filter(
     (o) =>
-      inDayRange(o.shippableDate ?? o.shipWindow?.[0], from.trim(), to.trim()) &&
+      inDayRange(o.shipWindow?.[0], from.trim(), to.trim()) &&
       (!name || o.productName === name) &&
       (!spec || o.spec === spec)
   )
@@ -87,7 +87,7 @@ export function useListFilter(orders: Order[]): {
   const filterPanel = (
     <>
       {open && (
-        <div className="space-y-3 rounded-b-lg border-2 border-line bg-white p-4">
+        <div className="anim-slide-down space-y-3 rounded-b-lg border-2 border-line bg-white p-4">
           {/* 出貨日：一個標籤，輸入分起～迄 */}
           <Row label="出貨日">
             <Trigger value={from} placeholder="起" onClick={() => setPicker('from')} />

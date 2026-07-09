@@ -9,9 +9,9 @@ export function mmddToIso(mmdd: string): string {
 
 // 測試日期是否已達該單的出貨起始日。
 // 指定出貨日(forcedShipDate)優先：客人指定當天才出，所以指定日＝可出貨起始日；
-// 否則用 shipWindow 起日，再退回 shippableDate。
+// 否則用 shipWindow 起日。
 export function isShipReached(order: Order, todayIso: string): boolean {
-  const start = order.forcedShipDate ?? order.shipWindow?.[0] ?? order.shippableDate
+  const start = order.forcedShipDate ?? order.shipWindow?.[0]
   if (!start) return true
   return todayIso >= mmddToIso(start)
 }
@@ -36,19 +36,45 @@ export function isInShippablePage(order: Order, todayIso: string): boolean {
   return timeBucket(order, todayIso) === 'shippable'
 }
 
-// 快到期：可出貨中、且今天距「出貨區間迄日」在 3 天內（含當天，尚未逾期）
-export function isNearDue(order: Order, todayIso: string): boolean {
+// 今天距「出貨區間迄日」的天數（可出貨中才算；非可出貨回傳 null）
+function daysToDue(order: Order, todayIso: string): number | null {
   const end = order.shipWindow?.[1]
-  if (!end || !isInShippablePage(order, todayIso)) return false
-  const diff = (new Date(mmddToIso(end)).getTime() - new Date(todayIso).getTime()) / 86400000
-  return diff >= 0 && diff <= 3
+  if (!end || !isInShippablePage(order, todayIso)) return null
+  return Math.round((new Date(mmddToIso(end)).getTime() - new Date(todayIso).getTime()) / 86400000)
 }
 
-// 逾期未出：可出貨中、且今天已超過「出貨區間迄日」
+// 快到期：距迄日 2~3 天（黃）
+export function isNearDue(order: Order, todayIso: string): boolean {
+  const d = daysToDue(order, todayIso)
+  return d !== null && d >= 1 && d <= 3
+}
+
+// 今日到期：今天正好是迄日（紅）
+export function isDueToday(order: Order, todayIso: string): boolean {
+  return daysToDue(order, todayIso) === 0
+}
+
+// 逾期未出：今天已超過迄日（紅）
 export function isOverdue(order: Order, todayIso: string): boolean {
-  const end = order.shipWindow?.[1]
-  if (!end || !isInShippablePage(order, todayIso)) return false
-  return todayIso > mmddToIso(end)
+  const d = daysToDue(order, todayIso)
+  return d !== null && d < 0
+}
+
+// 「重印」判定：改單後需重新列印
+export function needsReprint(order: Order): boolean {
+  return order.shipStatus === '改單待重印'
+}
+
+// 一張訂單「時間相關」狀態標籤（互斥、一次一個）。優先序：逾期 > 指定今日 > 今日到期 > 指定日期 > 快到期
+export function orderTimeTag(order: Order, todayIso: string): { label: string; tone: 'danger' | 'amber' } | null {
+  const todayMMDD = `${todayIso.slice(5, 7)}/${todayIso.slice(8, 10)}`
+  if (isOverdue(order, todayIso)) return { label: '逾期未出', tone: 'danger' }
+  if (order.forcedShipDate && order.forcedShipDate === todayMMDD && isInShippablePage(order, todayIso))
+    return { label: '指定今日出貨', tone: 'danger' }
+  if (isDueToday(order, todayIso)) return { label: '今日到期', tone: 'danger' }
+  if (order.forcedShipDate) return { label: `指定 ${order.forcedShipDate} 出貨`, tone: 'danger' }
+  if (isNearDue(order, todayIso)) return { label: '快到期', tone: 'amber' }
+  return null
 }
 
 // 農友「出貨預告」頁應顯示：進行中但尚未達出貨起始日的單

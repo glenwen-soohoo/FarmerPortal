@@ -8,7 +8,7 @@ import Tag from './Tag'
 import BtnLabel from './BtnLabel'
 import ConfirmDialog from './ConfirmDialog'
 import FailDialog from './FailDialog'
-import { EARLY_SHIP_WARNING, isNearDue, isOverdue } from '../utils/shipDate'
+import { EARLY_SHIP_WARNING, orderTimeTag, needsReprint } from '../utils/shipDate'
 
 interface Props {
   order: Order
@@ -17,6 +17,8 @@ interface Props {
   selectable?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  selectedQty?: number // 批次列印：此單要印幾張（1=原印，>1=含補印）
+  onQtyChange?: (delta: number) => void
   selectDisabled?: boolean // 此模式下該單不可勾選（如批次收貨時的非已印單）
   earlyEligible?: boolean // 有提早出貨資格：出貨預告的單可「提早印單」
   hideProduct?: boolean // 商品分組大卡片內：小卡不再顯示產品名 / 溫層（已在大卡標題）
@@ -25,10 +27,10 @@ interface Props {
 
 function windowText(o: Order) {
   if (o.shipWindow) return `${o.shipWindow[0]}–${o.shipWindow[1]}`
-  return o.shippableDate ?? '—'
+  return '—'
 }
 
-export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect, selectDisabled, earlyEligible, hideProduct, today }: Props) {
+export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect, selectedQty = 1, onQtyChange, selectDisabled, earlyEligible, hideProduct, today }: Props) {
   const { printOrder, failOrder } = useStore()
   const [printing, setPrinting] = useState(false)
   const [printStep, setPrintStep] = useState<'preparing' | 'done'>('preparing')
@@ -41,23 +43,10 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
 
   const printed = order.shipStatus === '已印單'
   const shipped = order.shipStatus === '已出貨'
-  const needsReprint = order.shipStatus === '改單待重印' || !!order.isUpdated
-  const forced = !!order.forcedShipDate // 指定出貨
-  // 指定出貨日是否正好是「今日」（today 為 'YYYY-MM-DD'，forcedShipDate 為 'MM/DD'）
-  const todayMMDD = today ? `${today.slice(5, 7)}/${today.slice(8, 10)}` : null
-  const forcedIsToday = forced && order.forcedShipDate === todayMMDD
-  // 快到期 / 逾期：僅需出貨頁（非預告）
-  const nearDue = !upcoming && !!today && isNearDue(order, today)
-  const overdue = !upcoming && !!today && isOverdue(order, today)
-
-  // 時間相關標籤「互斥、一次一個」，優先序：逾期 > 指定出貨日 > 快到期
-  const timeTag: { tone: 'danger' | 'amber'; label: string } | null = overdue
-    ? { tone: 'danger', label: '逾期未出' }
-    : forced
-    ? { tone: 'danger', label: forcedIsToday ? '指定今日出貨' : `指定 ${order.forcedShipDate} 出貨` }
-    : nearDue
-    ? { tone: 'amber', label: '快到期' }
-    : null
+  const isReprint = needsReprint(order)
+  const forced = !!order.forcedShipDate // 指定出貨（用來決定是否隱藏「預計出貨」）
+  // 時間相關標籤（互斥、一次一個）：逾期 > 指定今日 > 今日到期 > 指定日期 > 快到期
+  const timeTag = today ? orderTimeTag(order, today) : null
 
   // 群組容器內的一列：不用左邊色條 / 整列上色強調（見 #24 迭代）；狀態一律靠徽章表達。
   const rowCls = selectable && selected ? 'bg-mutedbg' : '' // 批次選中：中性淺底
@@ -96,15 +85,15 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   }
 
   return (
-    <div className={`flex items-stretch gap-4 p-5 ${rowCls}`} style={{ opacity: dimmed ? 0.45 : 1 }}>
+    <div className={`oc-row flex items-stretch gap-4 p-5 ${rowCls}`} style={{ opacity: dimmed ? 0.45 : 1 }}>
       {/* 左：訂單資訊。順序依「對農友的重要性」：規格數量 → 出貨提醒 → 出貨日 → (收合)收件資訊 */}
       <div className="min-w-0 flex-1">
-        {(timeTag || needsReprint) && (
+        {(timeTag || isReprint) && (
           <div className="mb-3 flex flex-wrap gap-2">
             {/* 時間相關標籤：互斥，一次只一個 */}
             {timeTag && <Tag tone={timeTag.tone}>{timeTag.label}</Tag>}
             {/* 更新重印：非時間標籤，可與時間標籤並存 */}
-            {needsReprint && <Tag tone="orange">已更新，請重印</Tag>}
+            {isReprint && <Tag tone="orange">已更新，請重印</Tag>}
           </div>
         )}
 
@@ -137,7 +126,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
 
           {/* 出貨提醒 */}
           <div className="mt-3">
-            <CleanRemark text={order.cleanRemark} />
+            <CleanRemark text={order.farmerRemark} />
           </div>
         </div>
 
@@ -153,7 +142,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
           <span className="text-ink2">{showRecipient ? '▴' : '▾'}</span>
         </button>
         {showRecipient && (
-          <div className="mt-2">
+          <div className="anim-slide-down mt-2">
             <div className="text-base">
               <span className="font-normal text-muted">訂單編號 </span>
               <span className="font-bold text-ink">{order.orderNumber}</span>
@@ -165,7 +154,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             <div className="mt-1 text-base text-ink2">{order.address}</div>
             <div className="mt-1 text-base">
               <span className="font-normal text-muted">出貨備註(給司機) </span>
-              <span className="text-ink">{order.shipRemark || '無'}</span>
+              <span className="text-ink">{order.driverRemark || '無'}</span>
             </div>
           </div>
         )}
@@ -242,29 +231,56 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
         </div>
       )}
 
-      {/* 批次模式：右上大勾選框（此模式不可選的單顯示禁用） */}
+      {/* 批次模式：勾選框 + 補印份數。桌機/平板：＋−上下、勾選框在上；手機：整組移右下、勾選框在右、份數在左 */}
       {selectable && (
-        <button
-          onClick={selectDisabled ? undefined : onToggleSelect}
-          disabled={selectDisabled}
-          aria-label="勾選此訂單"
-          className="flex shrink-0 items-center justify-center self-start rounded"
-          style={{
-            width: 40,
-            height: 40,
-            border: `2px solid ${selected ? '#1F6E43' : '#B9B6AC'}`,
-            background: selected ? '#1F6E43' : '#fff',
-            cursor: selectDisabled ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {selected && <span className="text-2xl font-bold text-white">✓</span>}
-        </button>
+        <div className="oc-select flex shrink-0 flex-col items-center gap-4 self-start">
+          <button
+            onClick={selectDisabled ? undefined : onToggleSelect}
+            disabled={selectDisabled}
+            aria-label="勾選此訂單"
+            className="flex items-center justify-center rounded"
+            style={{
+              width: 40,
+              height: 40,
+              border: `2px solid ${selected ? '#1F6E43' : '#B9B6AC'}`,
+              background: selected ? '#1F6E43' : '#fff',
+              cursor: selectDisabled ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {selected && <span className="text-2xl font-bold text-white">✓</span>}
+          </button>
+          {selected && (
+            <div className="oc-stepper flex flex-col items-center gap-2">
+              <button
+                onClick={() => onQtyChange?.(1)}
+                className="rounded border-2 border-line bg-white text-2xl font-bold text-ink"
+                style={{ width: 40, height: 40 }}
+                aria-label="增加份數"
+              >
+                ＋
+              </button>
+              <span className="whitespace-nowrap">
+                <span className="text-2xl font-bold text-ink">{selectedQty}</span>
+                <span className="ml-1 text-sm text-muted">張</span>
+              </span>
+              <button
+                onClick={() => onQtyChange?.(-1)}
+                disabled={selectedQty <= 1}
+                className="rounded border-2 border-line bg-white text-2xl font-bold text-ink disabled:opacity-40"
+                style={{ width: 40, height: 40 }}
+                aria-label="減少份數"
+              >
+                −
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* 列印動畫 */}
       {printing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(43,43,38,0.4)' }}>
-          <div className="rounded-card bg-white px-10 py-8 text-center">
+        <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(43,43,38,0.4)' }}>
+          <div className="anim-pop rounded-card bg-white px-10 py-8 text-center">
             <p className="text-2xl font-bold text-ink">{printStep === 'preparing' ? '準備中…' : '請至印表機取單'}</p>
           </div>
         </div>

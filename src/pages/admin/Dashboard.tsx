@@ -96,9 +96,9 @@ export default function Dashboard() {
     return orders.filter((o) => {
       if (applied.ship.length && !applied.ship.includes(o.shipStatus)) return false
       if (applied.judge.length && !applied.judge.includes(o.judgeStatus)) return false
-      if (!inRange(norm(o.shipWindow?.[0] ?? o.shippableDate), applied.from, applied.to)) return false
+      if (!inRange(norm(o.shipWindow?.[0]), applied.from, applied.to)) return false
       if (k) {
-        const hay = `${o.orderNumber} ${farmerName(o.farmerId)} ${o.recipient} ${o.phone} ${o.productName} ${o.variety ?? ''} ${o.rawRemark} ${o.cleanRemark}`
+        const hay = `${o.orderNumber} ${farmerName(o.farmerId)} ${o.recipient} ${o.phone} ${o.productName} ${o.variety ?? ''} ${o.rawRemark} ${o.farmerRemark}`
         if (!hay.includes(k)) return false
       }
       return true
@@ -233,7 +233,7 @@ export default function Dashboard() {
                       </div>
                     )}
                   </td>
-                  <td style={{ maxWidth: 220, color: o.cleanRemark ? 'var(--gox-text)' : 'var(--gox-text-muted)' }}>{o.cleanRemark || '—'}</td>
+                  <td style={{ maxWidth: 220, color: o.farmerRemark ? 'var(--gox-text)' : 'var(--gox-text-muted)' }}>{o.farmerRemark || '—'}</td>
                   <td className="cell-ops">
                     <button className="gox-btn-op" onClick={() => navigate(`/admin/orders/${o.id}`)}>詳情 / 改單</button>
                   </td>

@@ -40,36 +40,35 @@ export interface Order {
   spec: string
   qty: number
   tempLayer: TempLayer
-  rawRemark: string // 原始主單備註（客人母單原文，唯讀）
-  cleanRemark: string // 給農友備註（AI 清洗+分段後）
-  shipRemark?: string // 出貨備註（印在貨單上、給司機 / 物流看）
+  // 三種備註沿用現有 Orders 表欄位（本專案擴充、不另開表）：
+  rawRemark: string // 原始主單備註（= Orders.Remarks 原文，含客人填的＋系統塞的到貨日句，唯讀）
+  farmerRemark: string // 給農友備註（AI 清洗+分段後；對應 Orders.RemarkFromAdmin「倉庫備註」）
+  driverRemark?: string // 出貨備註（印在貨單上、給司機 / 物流看；對應 Orders.Remarks「出貨備註」）
   variety?: string // AI 清洗後品種名
   judgeStatus: JudgeStatus
   shipStatus: ShipStatus
-  shipWindow?: [string, string] // 預定出貨區間 [起, 迄]（訂單本身可出貨日期）
-  shippableDate?: string // 農友端顯示用（區間起日；沿用）
+  shipWindow?: [string, string] // 預定出貨區間 [起, 迄]（起日即農友端顯示的可出貨起始）
   blockedDates?: string[] // 不可出貨日（AI 判定，可複數：單日 "06/07" 或區間 "06/07–06/11"）
   forcedShipDate?: string // 強制指定出貨日（客人指定，MM/DD）
   remoteAgentCode?: string // 偏遠地區客代
-  isUpdated?: boolean
+  // 收貨日偏好：AI 從 rawRemark 解析出的產地直送到貨日選項（現有系統是塞進 Remarks 中文句、無獨立欄位）
+  deliveryDayPref?: '不指定' | '僅平日' | '僅假日'
   printedAt?: string
   trackingNos?: string[] // 黑貓物流單號（跟黑貓要號後才有；補單可多筆）
-  isWeekendPref?: boolean
-  isWeekdayPref?: boolean
   failReason?: string
   auditLog?: AuditEntry[]
 }
 
 export interface Farmer {
   id: number
-  name: string // 聯絡人姓名
-  farm: string // 農場/品牌
+  name: string // 聯絡人姓名（註：現有 Farmer 主檔無此欄，聯絡方式為 Mobile/Email/LineId；此為 mock 補充）
+  farm: string // 農場/主體名稱（對應 Farmer.Name）
   phone: string
   status: '未開通' | '已開通' | '已停用'
   lastLogin?: string
-  earlyShip?: boolean // 提早出貨資格：可在未達出貨時間時提早印單
+  earlyShipAllowed?: boolean // 提早出貨資格：可在未達出貨時間時提早印單
   // 詳細資料（Farmer 主檔，master 在 Enzo，唯讀）
-  brand?: string
+  brand?: string // 品牌（對應 Farmer.Brand，與農場名 farm 為不同欄位）
   origin?: string // 產地
   cert?: string // 認證
   bank?: string // 銀行帳戶
@@ -80,6 +79,6 @@ export interface Product {
   id: string
   name: string
   spec: string
-  isTransform: boolean // 產地直送
-  boundFarmerId?: number
+  isTransform: boolean // 產地直送（沿用現有 Product.IsTransform 欄位命名）
+  farmerId?: number // 綁定農友（對應 ProductFarmerMap.FarmerId）
 }

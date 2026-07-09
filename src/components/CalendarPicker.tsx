@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-// 假資料統一 2026 年；日曆輸出 'MM/DD' 與 order.shippableDate 一致
+// 假資料統一 2026 年；日曆輸出 'MM/DD' 與 order.shipWindow 日期格式一致
 const YEAR = 2026
 const WEEK = ['日', '一', '二', '三', '四', '五', '六']
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -26,12 +26,12 @@ export default function CalendarPicker({ title, value, onSelect, onClose }: Prop
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="anim-fade fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ background: 'rgba(43,43,38,0.4)' }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-white"
+        className="anim-pop w-full max-w-md rounded-2xl bg-white"
         style={{ maxHeight: '85vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >

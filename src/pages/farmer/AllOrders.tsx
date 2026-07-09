@@ -40,7 +40,7 @@ export default function AllOrders() {
     const kw = applied.keyword.trim()
     return mine.filter(
       (o) =>
-        inDayRange(o.shippableDate, applied.from.trim(), applied.to.trim()) &&
+        inDayRange(o.shipWindow?.[0], applied.from.trim(), applied.to.trim()) &&
         (!kw || o.orderNumber.includes(kw) || o.recipient.includes(kw) || o.address.includes(kw))
     )
   }, [mine, applied])
@@ -115,7 +115,7 @@ export default function AllOrders() {
                 {o.productName}
                 <span className="ml-2 text-base font-normal text-ink2">{o.spec}　×{o.qty}</span>
               </div>
-              <div className="mt-1 text-base text-ink2">預計出貨 {windowText(o.shipWindow, o.shippableDate)}</div>
+              <div className="mt-1 text-base text-ink2">預計出貨 {windowText(o.shipWindow)}</div>
               <div className="mt-1 text-base text-ink2">
                 {o.recipient}　{o.phone}
               </div>

@@ -2,7 +2,7 @@ import type { Farmer } from '../types'
 
 export const seedFarmers: Farmer[] = [
   {
-    id: 1, name: '陳鐵人', farm: '鐵人果園', phone: '0922000111', status: '已開通', lastLogin: '2026-06-29 08:10', earlyShip: true,
+    id: 1, name: '陳鐵人', farm: '鐵人果園', phone: '0922000111', status: '已開通', lastLogin: '2026-06-29 08:10', earlyShipAllowed: true,
     brand: '鐵人夫婦', origin: '花蓮縣瑞穗鄉', cert: '產銷履歷 TAP', bank: '822 中國信託 ****3210', lineId: '@ironfarm',
   },
   {

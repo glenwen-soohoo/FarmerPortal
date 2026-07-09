@@ -21,7 +21,7 @@ interface Props {
 }
 
 export default function DevPanel({ today, onChange, shippableCount, upcomingCount, earlyEligible, onToggleEarly }: Props) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
 
   return (
     <div className="fixed bottom-4 right-4 z-40" style={{ fontFamily: "'Noto Sans TC', sans-serif" }}>

@@ -16,8 +16,8 @@ export default function FailDialog({ recipient, onConfirm, onCancel }: Props) {
 
   if (confirming) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}>
-        <div className="w-full max-w-md rounded-card bg-white p-6">
+      <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}>
+        <div className="anim-pop w-full max-w-md rounded-card bg-white p-6">
           <h3 className="text-2xl font-bold text-ink">確認回報無法出貨</h3>
           <p className="mt-4 text-lg text-ink2">
             「{recipient} 的訂單」原因：{reason}
@@ -37,8 +37,8 @@ export default function FailDialog({ recipient, onConfirm, onCancel }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onCancel}>
-      <div className="w-full max-w-md rounded-card bg-white p-6" onClick={(e) => e.stopPropagation()}>
+    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onCancel}>
+      <div className="anim-pop w-full max-w-md rounded-card bg-white p-6" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-2xl font-bold text-ink">無法出貨</h3>
         <p className="mt-3 text-lg text-ink2">請選擇原因：</p>
         <div className="mt-3 grid grid-cols-2 gap-3">

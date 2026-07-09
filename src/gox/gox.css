@@ -176,8 +176,9 @@
 .gox-icon-btn:hover { background: #f0f4f8; color: var(--gox-info); border-color: #bcd4ea; }
 
 /* ── modal（彈窗）── */
-.gox-modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.gox-modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); display: flex; align-items: center; justify-content: center; z-index: 1000; animation: gbFade .18s ease-out both; }
 .gox-modal-overlay.is-hidden { display: none; }
-.gox-modal-box { background: #fff; border-radius: 8px; padding: 24px; min-width: 480px; max-width: 720px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, .3); }
+.gox-modal-box { background: #fff; border-radius: 8px; padding: 24px; min-width: 480px; max-width: 720px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, .3); animation: gbPop .2s cubic-bezier(.2, .8, .2, 1) both; }
+@media (prefers-reduced-motion: reduce) { .gox-modal-overlay, .gox-modal-box { animation: none; } }
 .gox-modal-box h4 { margin: 0 0 16px; font-size: 16px; }
 .gox-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }

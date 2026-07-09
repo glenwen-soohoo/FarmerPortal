@@ -40,7 +40,7 @@ export default function Accounts() {
 
   // 提早出貨：開放需確認；關閉可直接關
   const toggleEarly = (f: Farmer) => {
-    if (f.earlyShip) {
+    if (f.earlyShipAllowed) {
       setEarlyShip(f.id, false)
       flash(`已關閉「${f.farm}」提早出貨資格`)
     } else {
@@ -75,16 +75,18 @@ export default function Accounts() {
 
       {/* 頂部置中小彈窗（antd message 風格），自動消失 */}
       {msg && (
-        <div
-          style={{
-            position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 2000,
-            background: '#fff', border: '1px solid #e6e6e6', borderRadius: 6,
-            boxShadow: '0 6px 20px rgba(0,0,0,.12)', padding: '10px 18px', fontSize: 14,
-            color: 'var(--gox-text)', display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
-          }}
-        >
-          <span style={{ color: 'var(--gox-success)', fontWeight: 700 }}>✓</span>
-          {msg}
+        <div style={{ position: 'fixed', top: 16, left: 0, right: 0, zIndex: 2000, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+          <div
+            className="anim-slide-down"
+            style={{
+              background: '#fff', border: '1px solid #e6e6e6', borderRadius: 6,
+              boxShadow: '0 6px 20px rgba(0,0,0,.12)', padding: '10px 18px', fontSize: 14,
+              color: 'var(--gox-text)', display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
+            }}
+          >
+            <span style={{ color: 'var(--gox-success)', fontWeight: 700 }}>✓</span>
+            {msg}
+          </div>
         </div>
       )}
 
@@ -111,10 +113,10 @@ export default function Accounts() {
                   <td><span className={`gox-tag ${STATUS_TAG[f.status]}`}>{f.status}</span></td>
                   <td className="cell-center">
                     <button
-                      className={`gox-switch ${f.earlyShip ? 'is-on' : ''}`}
+                      className={`gox-switch ${f.earlyShipAllowed ? 'is-on' : ''}`}
                       style={{ transform: 'scale(0.8)' }}
                       aria-label="提早出貨資格"
-                      title={f.earlyShip ? '已開放（點擊關閉）' : '未開放（點擊開放）'}
+                      title={f.earlyShipAllowed ? '已開放（點擊關閉）' : '未開放（點擊開放）'}
                       onClick={() => toggleEarly(f)}
                     />
                   </td>
@@ -143,7 +145,7 @@ export default function Accounts() {
                 <tr><th>認證</th><td>{detail.cert ?? '—'}</td></tr>
                 <tr><th>銀行帳戶</th><td>{detail.bank ?? '—'}</td></tr>
                 <tr><th>LINE ID</th><td>{detail.lineId ?? '—'}</td></tr>
-                <tr><th>提早出貨資格</th><td>{farmers.find((f) => f.id === detail.id)?.earlyShip ? '已開放' : '未開放'}</td></tr>
+                <tr><th>提早出貨資格</th><td>{farmers.find((f) => f.id === detail.id)?.earlyShipAllowed ? '已開放' : '未開放'}</td></tr>
                 <tr><th>最後登入</th><td>{detail.lastLogin ?? '從未登入'}</td></tr>
               </tbody>
             </table>
