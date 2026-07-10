@@ -33,6 +33,7 @@ export interface Order {
   id: string
   orderNumber: string
   farmerId: number
+  masterOrderId?: number // 母單 Orders.Id（同母單分組/重判用；本 id = 子單 Orders.Id）
   recipient: string
   phone: string
   address: string
@@ -40,12 +41,15 @@ export interface Order {
   spec: string
   qty: number
   tempLayer: TempLayer
-  // 三種備註沿用現有 Orders 表欄位（本專案擴充、不另開表）：
-  rawRemark: string // 原始主單備註（= Orders.Remarks 原文，含客人填的＋系統塞的到貨日句，唯讀）
-  farmerRemark: string // 給農友備註（AI 清洗+分段後；對應 Orders.RemarkFromAdmin「倉庫備註」）
-  driverRemark?: string // 出貨備註（印在貨單上、給司機 / 物流看；對應 Orders.Remarks「出貨備註」）
+  // 備註分兩層：rawRemark 是 SQL Orders.Remarks 原文（唯讀）；farmerRemark / driverRemark 是 AI 判定產物、存 Mongo（非 Orders 欄位、另開 Mongo 判定/衍生層）。
+  rawRemark: string // 客人原始備註（= Orders.Remarks 原文，含到貨日中文句，唯讀；AI 判定唯一自由文字來源）
+  farmerRemark: string // AI 產（Mongo）：給農友的作業備註（品種/數量/出貨動作）；農友端唯一顯示的備註
+  driverRemark?: string // AI 產（Mongo）：印在物流單、給司機/物流的配送指示（放哪/電聯/易碎）
+  csRemark?: string // SQL Orders.CustomerServiceRemark（客服備註、非 AI、不動）；補單記錄也續記於此
   variety?: string // AI 清洗後品種名
   judgeReason?: string // AI 判定理由（唯讀，對應 AI 回傳的 reason）
+  confidence?: number // AI 判定信心 0–1（< 門檻 → 低信心）；judgeStatus 由 confidence + needsHuman 映射（見 F3 §4-2）
+  needsHuman?: boolean // AI 標記需人工（true → 判定失敗 / 轉人工）
   judgeStatus: JudgeStatus
   shipStatus: ShipStatus
   shipWindow?: [string, string] // 預定出貨區間 [起, 迄]（起日即農友端顯示的可出貨起始）
@@ -54,7 +58,9 @@ export interface Order {
   remoteAgentCode?: string // 偏遠地區客代
   printedAt?: string
   trackingNos?: string[] // 黑貓物流單號（跟黑貓要號後才有；補單可多筆）
-  failReason?: string
+  failReason?: string // 農友回報「無法出貨」原因
+  rescheduledShipDate?: string // 貓咪改的新出貨日（配 failReason，MM/DD）
+  orderAmount?: number // 訂單金額（結算冗餘，非判定；真值以 SQL 為準）
   auditLog?: AuditEntry[]
 }
 

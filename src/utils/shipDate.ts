@@ -82,16 +82,34 @@ export function isInUpcomingPage(order: Order, todayIso: string): boolean {
   return timeBucket(order, todayIso) === 'upcoming'
 }
 
-// 農友清單排序：同品名聚在一起、同規格相鄰（每張單仍獨立、不合併）。
-// 排序鍵：品名(清洗後 variety→productName) → 規格 → 盒數多優先 → 訂單號。
-export function sortForFarmer(list: Order[]): Order[] {
+// 訂單「急迫度」排名（數字小＝優先）：指定出貨 > 改單重印 > 快到期 > 一般(下單日)
+function urgencyRank(o: Order, todayIso: string): number {
+  if (o.forcedShipDate) return 0 // 指定出貨
+  if (needsReprint(o)) return 1 // 改單重印
+  if (isNearDue(o, todayIso)) return 2 // 快到期
+  return 3 // 一般 → 依下單日
+}
+
+// 農友清單排序（每張單仍獨立、不合併）。優先序：
+//   同品名聚一起 → 同規格聚一起（規格組彼此依「組內最急迫者」排序）→
+//   規格內依 指定出貨 > 改單重印 > 快到期 > 下單日（訂單號遞增當下單日 proxy）。
+export function sortForFarmer(list: Order[], todayIso: string): Order[] {
   const name = (o: Order) => (o.variety && o.variety.trim()) || o.productName
+  const specKey = (o: Order) => `${name(o)}|${o.spec}`
+  // 每個「品名|規格」組的最急迫排名，決定規格組之間的先後（讓有指定/重印/快到期的規格往前）
+  const specBest = new Map<string, number>()
+  for (const o of list) {
+    const k = specKey(o)
+    const r = urgencyRank(o, todayIso)
+    if (!specBest.has(k) || r < specBest.get(k)!) specBest.set(k, r)
+  }
   return [...list].sort(
     (a, b) =>
-      name(a).localeCompare(name(b), 'zh-Hant') ||
-      a.spec.localeCompare(b.spec, 'zh-Hant') ||
-      b.qty - a.qty ||
-      a.orderNumber.localeCompare(b.orderNumber)
+      name(a).localeCompare(name(b), 'zh-Hant') || // 同品名聚一起
+      specBest.get(specKey(a))! - specBest.get(specKey(b))! || // 規格組依急迫度
+      a.spec.localeCompare(b.spec, 'zh-Hant') || // 確保同規格相鄰
+      urgencyRank(a, todayIso) - urgencyRank(b, todayIso) || // 規格內依急迫度
+      a.orderNumber.localeCompare(b.orderNumber) // 下單日
   )
 }
 

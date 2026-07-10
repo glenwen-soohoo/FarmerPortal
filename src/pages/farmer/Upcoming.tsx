@@ -11,7 +11,8 @@ export default function Upcoming() {
   const { today, earlyEligible, setNavLocked } = useOutletContext<FarmerOutletCtx>()
 
   const list = sortForFarmer(
-    orders.filter((o) => o.farmerId === currentFarmerId && isInUpcomingPage(o, today))
+    orders.filter((o) => o.farmerId === currentFarmerId && isInUpcomingPage(o, today)),
+    today
   )
   const { filtered, filterButton, filterPanel } = useListFilter(list)
 

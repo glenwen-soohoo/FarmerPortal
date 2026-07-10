@@ -115,6 +115,13 @@ body {
     height: auto !important;
   }
   .oc-action > .oc-fail { flex: 1 1 0; }
+
+  /* 手機版是全寬直向堆疊：規格區塊一律直角讓分隔線平整；
+     訂單區底部才收圓角，接續上方品名欄的頂部圓角，整體像一張卡片 */
+  .pg-specblock { border-radius: 0 !important; }
+  .pg-orders { border-radius: 0 0 8px 8px !important; }
+  /* 規格分隔的暖灰間隔手機版收窄到 4px（仍比一般 1px 細線粗、比桌機 8px 細） */
+  .pg-orders > * + * { margin-top: 4px !important; }
 }
 
 /* 後台基礎字級 14px */

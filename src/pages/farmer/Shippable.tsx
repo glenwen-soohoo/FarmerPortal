@@ -11,7 +11,8 @@ export default function Shippable() {
   const { setNavLocked, today } = useOutletContext<FarmerOutletCtx>()
 
   const list = sortForFarmer(
-    orders.filter((o) => o.farmerId === currentFarmerId && isInShippablePage(o, today))
+    orders.filter((o) => o.farmerId === currentFarmerId && isInShippablePage(o, today)),
+    today
   )
   const { filtered, filterButton, filterPanel } = useListFilter(list)
 

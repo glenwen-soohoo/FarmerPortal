@@ -117,6 +117,13 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
               return n
             })
           const temps = [...new Set(g.orders.map((o) => o.tempLayer))]
+          // 依規格切成子區塊：同品名下不同規格各自成獨立圓角區塊（左緣仍接同一品名欄）
+          const specBlocks: { spec: string; orders: Order[] }[] = []
+          g.orders.forEach((o) => {
+            const last = specBlocks[specBlocks.length - 1]
+            if (last && last.spec === o.spec) last.orders.push(o)
+            else specBlocks.push({ spec: o.spec, orders: [o] })
+          })
 
           return (
             <section
@@ -180,22 +187,26 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
                 </div>
               </aside>
 
-              {/* 右側：該商品的訂單列 */}
-              <div className="min-w-0 flex-1 divide-y divide-line overflow-hidden rounded-r-card">
-                {g.orders.map((o) => (
-                  <OrderCard
-                    key={o.id}
-                    order={o}
-                    hideProduct
-                    upcoming={mode === 'early'}
-                    earlyEligible={earlyEligible}
-                    selectable={active}
-                    selected={sel.has(o.id)}
-                    selectedQty={sel.get(o.id) ?? 1}
-                    onToggleSelect={() => toggle(o.id)}
-                    onQtyChange={(d) => addQty(o.id, d)}
-                    today={today}
-                  />
+              {/* 右側：依規格分成獨立圓角區塊，區塊間用暖灰間隔，右側邊角圓角像分開的卡片 */}
+              <div className="pg-orders min-w-0 flex-1 space-y-2 overflow-hidden rounded-r-card bg-canvas">
+                {specBlocks.map((blk, bi) => (
+                  <div key={`${blk.spec}_${bi}`} className="pg-specblock divide-y divide-line overflow-hidden rounded-r-card bg-white">
+                    {blk.orders.map((o) => (
+                      <OrderCard
+                        key={o.id}
+                        order={o}
+                        hideProduct
+                        upcoming={mode === 'early'}
+                        earlyEligible={earlyEligible}
+                        selectable={active}
+                        selected={sel.has(o.id)}
+                        selectedQty={sel.get(o.id) ?? 1}
+                        onToggleSelect={() => toggle(o.id)}
+                        onQtyChange={(d) => addQty(o.id, d)}
+                        today={today}
+                      />
+                    ))}
+                  </div>
                 ))}
               </div>
             </section>

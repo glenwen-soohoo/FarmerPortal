@@ -155,7 +155,7 @@ export const seedOrders: Order[] = [
     id: '18', orderNumber: '260610862018', farmerId: 2,
     recipient: '賴柏翰', phone: '0913000018', address: '台北市大同區重慶北路三段55號',
     productName: '玉荷包荔枝', variety: '玉荷包荔枝', spec: '1盒(3斤裝)', qty: 1, tempLayer: '冷藏',
-    rawRemark: '收件人改成公司地址，麻煩重寄', farmerRemark: '（地址已更新）', driverRemark: '假日請避開中午 12–13 點配送',
+    rawRemark: '收件人改成公司地址，麻煩重寄', farmerRemark: '（地址已更新）', driverRemark: '假日請避開中午 12–13 點配送', csRemark: '客服：客人改公司地址，已重新取號',
     judgeStatus: 'AI判定完成', shipStatus: '改單待重印',
     shipWindow: ['06/12', '06/25'],
   },
@@ -173,7 +173,7 @@ export const seedOrders: Order[] = [
     id: '20', orderNumber: '260611863020', farmerId: 3,
     recipient: '范植偉', phone: '0914000020', address: '桃園市中壢區中央西路二段20號',
     productName: '黑葉荔枝', variety: '黑葉荔枝', spec: '1盒(5斤裝)', qty: 1, tempLayer: '冷藏',
-    rawRemark: '數量改成 1 盒（原 2 盒），已跟客人確認', farmerRemark: '數量已改為 1 盒',
+    rawRemark: '數量改成 1 盒（原 2 盒），已跟客人確認', farmerRemark: '數量已改為 1 盒', csRemark: '客服：數量由 2 盒改 1 盒，客人已確認',
     judgeStatus: '人工修正判定', shipStatus: '改單待重印',
     shipWindow: ['06/16', '06/29'],
   },
@@ -260,4 +260,20 @@ seedOrders.forEach((o) => {
   if (o.shipStatus === '可出貨' && (!o.trackingNos || o.trackingNos.length === 0)) {
     o.trackingNos = [`9007${o.id.padStart(3, '0')}5678`]
   }
+})
+
+// 判定信心：依 judgeStatus 反推示範用 confidence / needsHuman（實作時由 AI 回傳、judgeStatus 反由兩者映射，見 F3 §4-2）
+seedOrders.forEach((o) => {
+  if (o.needsHuman !== undefined) return
+  if (o.judgeStatus === 'AI判定失敗') {
+    o.needsHuman = true
+    o.confidence = 0.2
+  } else if (o.judgeStatus === 'AI判定完成(低信心)') {
+    o.needsHuman = false
+    o.confidence = 0.55
+  } else if (o.judgeStatus === 'AI判定完成' || o.judgeStatus === '人工修正判定') {
+    o.needsHuman = false
+    o.confidence = 0.92
+  }
+  // 尚未判定：不設 confidence / needsHuman
 })
