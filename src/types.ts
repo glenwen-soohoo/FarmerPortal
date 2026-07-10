@@ -45,14 +45,13 @@ export interface Order {
   farmerRemark: string // 給農友備註（AI 清洗+分段後；對應 Orders.RemarkFromAdmin「倉庫備註」）
   driverRemark?: string // 出貨備註（印在貨單上、給司機 / 物流看；對應 Orders.Remarks「出貨備註」）
   variety?: string // AI 清洗後品種名
+  judgeReason?: string // AI 判定理由（唯讀，對應 AI 回傳的 reason）
   judgeStatus: JudgeStatus
   shipStatus: ShipStatus
   shipWindow?: [string, string] // 預定出貨區間 [起, 迄]（起日即農友端顯示的可出貨起始）
   blockedDates?: string[] // 不可出貨日（AI 判定，可複數：單日 "06/07" 或區間 "06/07–06/11"）
   forcedShipDate?: string // 強制指定出貨日（客人指定，MM/DD）
   remoteAgentCode?: string // 偏遠地區客代
-  // 收貨日偏好：AI 從 rawRemark 解析出的產地直送到貨日選項（現有系統是塞進 Remarks 中文句、無獨立欄位）
-  deliveryDayPref?: '不指定' | '僅平日' | '僅假日'
   printedAt?: string
   trackingNos?: string[] // 黑貓物流單號（跟黑貓要號後才有；補單可多筆）
   failReason?: string

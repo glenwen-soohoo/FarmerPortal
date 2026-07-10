@@ -153,7 +153,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             </div>
             <div className="mt-1 text-base text-ink2">{order.address}</div>
             <div className="mt-1 text-base">
-              <span className="font-normal text-muted">出貨備註(給司機) </span>
+              <span className="font-normal text-muted">給司機備註 </span>
               <span className="text-ink">{order.driverRemark || '無'}</span>
             </div>
           </div>

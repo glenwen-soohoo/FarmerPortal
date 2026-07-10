@@ -49,7 +49,7 @@ export default function FarmerLayout() {
   const [navLocked, setNavLocked] = useState(false)
   const [today, setToday] = useState(DEFAULT_DEV_TODAY)
   const [printerConnected, setPrinterConnected] = useState(true)
-  const [earlyEligible, setEarlyEligible] = useState<boolean>(me?.earlyShipAllowed ?? true)
+  const [earlyEligible, setEarlyEligible] = useState<boolean>(me?.earlyShipAllowed ?? false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [fontPx, setFontPx] = useState(16)
   const [isNarrow, setIsNarrow] = useState(false) // 手機版：寬 < 560px

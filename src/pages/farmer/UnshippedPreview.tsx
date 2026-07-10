@@ -163,7 +163,11 @@ export default function UnshippedPreview() {
         </>
       ) : (
         <>
-          <p className="text-lg text-ink2">已按印單、但黑貓尚未收走（未出貨）的訂單，依產品彙總。</p>
+          <p className="text-lg text-ink2">
+            已按印單、但黑貓尚未收走的訂單，依產品彙總。
+            <br />
+            當黑貓收貨並於黑貓系統切換貨態後，此處的未出單就會自動消失。
+          </p>
           <Block title="印單未出" tone="printed" groups={printed} emptyMsg="目前沒有印單未出的訂單" />
         </>
       )}

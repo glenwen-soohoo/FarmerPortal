@@ -88,11 +88,9 @@ export function useStore() {
   return v
 }
 
-// 可出貨排序：① 僅假日 ② 僅平日 ③ 盒數多 ④ 有備註往後 ⑤ 訂單號
+// 可出貨排序：① 盒數多 ② 有備註往後 ③ 訂單號（平日/假日偏好已改由 blockedDates 表達，不再獨立排序）
 export function sortShippable(list: Order[]): Order[] {
-  const prefRank = (o: Order) => (o.deliveryDayPref === '僅假日' ? 0 : o.deliveryDayPref === '僅平日' ? 1 : 2)
   return [...list].sort((a, b) => {
-    if (prefRank(a) !== prefRank(b)) return prefRank(a) - prefRank(b)
     if (b.qty !== a.qty) return b.qty - a.qty
     const aHas = a.farmerRemark.trim().length > 0
     const bHas = b.farmerRemark.trim().length > 0
