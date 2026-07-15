@@ -5,7 +5,6 @@ import FarmerLayout from './pages/farmer/FarmerLayout'
 import Login from './pages/farmer/Login'
 import Shippable from './pages/farmer/Shippable'
 import Upcoming from './pages/farmer/Upcoming'
-import History from './pages/farmer/History'
 import AllOrders from './pages/farmer/AllOrders'
 import UnshippedPreview from './pages/farmer/UnshippedPreview'
 import Printer from './pages/farmer/Printer'
@@ -25,7 +24,6 @@ export default function App() {
       <Route path="/farmer" element={<FarmerLayout />}>
         <Route path="shippable" element={<Shippable />} />
         <Route path="upcoming" element={<Upcoming />} />
-        <Route path="history" element={<History />} />
         <Route path="all" element={<AllOrders />} />
         <Route path="preview" element={<UnshippedPreview />} />
         <Route path="printer" element={<Printer />} />

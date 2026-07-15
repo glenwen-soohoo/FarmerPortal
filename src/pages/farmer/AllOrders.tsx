@@ -35,7 +35,15 @@ export default function AllOrders() {
           {filtered.map((o) => (
             <div key={o.id} className="rounded-card border border-line bg-white p-4">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted">訂單編號 {o.orderNumber}</span>
+                <span className="flex flex-wrap items-baseline gap-x-4 text-sm text-muted">
+                  <span>訂單編號 {o.orderNumber}</span>
+                  <span>
+                    物流編號{' '}
+                    <span className="font-bold text-ink">
+                      {o.trackingNos && o.trackingNos.length > 0 ? o.trackingNos.join('、') : '尚無'}
+                    </span>
+                  </span>
+                </span>
                 <StatusBadge status={o.shipStatus} />
               </div>
               <div className="mt-1 text-lg font-bold text-ink">

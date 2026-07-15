@@ -70,9 +70,9 @@ export function orderTimeTag(order: Order, todayIso: string): { label: string; t
   const todayMMDD = `${todayIso.slice(5, 7)}/${todayIso.slice(8, 10)}`
   if (isOverdue(order, todayIso)) return { label: '逾期未出', tone: 'danger' }
   if (order.forcedShipDate && order.forcedShipDate === todayMMDD && isInShippablePage(order, todayIso))
-    return { label: '指定今日出貨', tone: 'danger' }
+    return { label: '客人指定今日出貨', tone: 'danger' }
   if (isDueToday(order, todayIso)) return { label: '今日到期', tone: 'danger' }
-  if (order.forcedShipDate) return { label: `指定 ${order.forcedShipDate} 出貨`, tone: 'danger' }
+  if (order.forcedShipDate) return { label: `客人指定 ${order.forcedShipDate} 出貨`, tone: 'danger' }
   if (isNearDue(order, todayIso)) return { label: '快到期', tone: 'amber' }
   return null
 }

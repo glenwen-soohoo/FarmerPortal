@@ -18,10 +18,6 @@ export default function Me() {
           <div className="text-2xl font-bold text-ink">{me?.farm}</div>
         </div>
         <div>
-          <div className="text-base text-ink2">聯絡人</div>
-          <div className="text-xl text-ink">{me?.name}</div>
-        </div>
-        <div>
           <div className="text-base text-ink2">聯絡電話</div>
           <div className="text-xl text-ink">{me?.phone}</div>
         </div>

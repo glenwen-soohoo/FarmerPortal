@@ -18,9 +18,22 @@ interface Props {
   upcomingCount: number
   earlyEligible: boolean
   onToggleEarly: () => void
+  farmers: { id: number; farm: string }[]
+  currentFarmerId: number
+  onChangeFarmer: (id: number) => void
 }
 
-export default function DevPanel({ today, onChange, shippableCount, upcomingCount, earlyEligible, onToggleEarly }: Props) {
+export default function DevPanel({
+  today,
+  onChange,
+  shippableCount,
+  upcomingCount,
+  earlyEligible,
+  onToggleEarly,
+  farmers,
+  currentFarmerId,
+  onChangeFarmer,
+}: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -31,12 +44,30 @@ export default function DevPanel({ today, onChange, shippableCount, upcomingCoun
           style={{ background: '#2B2B26' }}
         >
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-bold tracking-wide">開發面板 · 測試日期</span>
+            <span className="text-sm font-bold tracking-wide">開發面板</span>
             <button onClick={() => setOpen(false)} className="text-sm text-gray-300" aria-label="收合">
               ✕
             </button>
           </div>
 
+          {/* 切換登入農友（驗證各農友資料，如文旦 7-11／企業匯單） */}
+          <div className="mb-3">
+            <div className="mb-1 text-xs text-gray-400">目前登入農友</div>
+            <select
+              value={currentFarmerId}
+              onChange={(e) => onChangeFarmer(Number(e.target.value))}
+              className="w-full rounded px-2 py-1 text-base text-ink"
+              style={{ background: '#fff' }}
+            >
+              {farmers.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.id}. {f.farm}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-1 text-xs text-gray-400">測試日期</div>
           <input
             type="date"
             value={today}

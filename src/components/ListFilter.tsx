@@ -30,6 +30,30 @@ interface FilterOpts {
   status?: boolean // 顯示出貨狀態四分類按鈕（預設「已出貨」）
 }
 
+// 觸發鈕（顯示目前值 + ▾）。定義在模組層級，元件識別穩定，避免每次 render 重掛載導致輸入焦點丟失。
+function Trigger({ value, placeholder, onClick }: { value: string; placeholder: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-1 items-center justify-between rounded-lg border border-line bg-white px-3 text-left"
+      style={{ minHeight: 52 }}
+    >
+      <span className="text-lg font-medium text-ink">{value || placeholder}</span>
+      <span className="text-ink2">▾</span>
+    </button>
+  )
+}
+
+// 左標籤 + 右欄位的一列
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-16 shrink-0 text-base text-ink2">{label}</span>
+      <div className="flex flex-1 items-center gap-2">{children}</div>
+    </div>
+  )
+}
+
 // 出貨日區間比對：MM/DD 同年度字典序＝時間序。未輸入起 → 不限開始；未輸入迄 → 不限結束。
 function inDayRange(day: string | undefined, from: string, to: string) {
   if (!from && !to) return true
@@ -40,7 +64,7 @@ function inDayRange(day: string | undefined, from: string, to: string) {
 }
 
 /**
- * 三個列表分頁（需出貨 / 出貨預告 / 出貨紀錄）共用的篩選。
+ * 列表分頁（需出貨 / 出貨預告 / 所有訂單）共用的篩選。
  * 標籤放左邊、欄位放右邊；出貨日只用一個標籤，但輸入仍分「起 ～ 迄」。
  */
 export function useListFilter(orders: Order[], opts?: FilterOpts): {
@@ -51,7 +75,7 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
 } {
   const withKeyword = !!opts?.keyword
   const withStatus = !!opts?.status
-  const advanced = withKeyword || withStatus // 所有訂單的進階面板：商品名+規格併列
+  const advanced = withStatus // 進階面板（所有訂單）：商品名+規格併列；僅開關鍵字的頁面維持各自一列
   const [open, setOpen] = useState(false)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -71,30 +95,16 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
       (!name || o.productName === name) &&
       (!spec || o.spec === spec) &&
       (!withStatus || ship === 'all' || shipGroupOf(o.shipStatus) === ship) &&
-      (!withKeyword || !kw || o.orderNumber.includes(kw) || o.recipient.includes(kw) || o.address.includes(kw))
+      (!withKeyword ||
+        !kw ||
+        o.orderNumber.includes(kw) ||
+        o.recipient.includes(kw) ||
+        o.phone.includes(kw) ||
+        o.address.includes(kw) ||
+        (o.trackingNos ?? []).some((t) => t.includes(kw)))
   )
   // 「篩選中」數量：日期 / 商品 / 規格 / 關鍵字（出貨狀態視為常駐分頁、不計入，清除時另外還原）
   const activeCount = (from || to ? 1 : 0) + (name ? 1 : 0) + (spec ? 1 : 0) + (withKeyword && kw ? 1 : 0)
-
-  // 觸發鈕（顯示目前值 + ▾）
-  const Trigger = ({ value, placeholder, onClick }: { value: string; placeholder: string; onClick: () => void }) => (
-    <button
-      onClick={onClick}
-      className="flex flex-1 items-center justify-between rounded-lg border border-line bg-white px-3 text-left"
-      style={{ minHeight: 52 }}
-    >
-      <span className="text-lg font-medium text-ink">{value || placeholder}</span>
-      <span className="text-ink2">▾</span>
-    </button>
-  )
-
-  // 左標籤 + 右欄位的一列
-  const Row = ({ label, children }: { label: string; children: ReactNode }) => (
-    <div className="flex items-center gap-3">
-      <span className="w-16 shrink-0 text-base text-ink2">{label}</span>
-      <div className="flex flex-1 items-center gap-2">{children}</div>
-    </div>
-  )
 
   const filterButton = (
     <button
@@ -151,7 +161,7 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
               <input
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                placeholder="訂單編號 / 收件人 / 地址"
+                placeholder="收件人 / 手機 / 訂單編號 / 物流編號"
                 className="min-w-0 flex-1 rounded-lg border border-line px-3 text-lg text-ink"
                 style={{ minHeight: 52 }}
               />

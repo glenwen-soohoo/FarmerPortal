@@ -138,8 +138,7 @@ export default function Accounts() {
             <h4>{detail.farm}　<span className={`gox-tag ${STATUS_TAG[detail.status]}`} style={{ verticalAlign: 'middle' }}>{detail.status}</span></h4>
             <table className="gox-table">
               <tbody>
-                <tr><th style={{ width: 96 }}>聯絡人</th><td>{detail.name}</td></tr>
-                <tr><th>品牌</th><td>{detail.brand ?? '—'}</td></tr>
+                <tr><th style={{ width: 96 }}>品牌</th><td>{detail.brand ?? '—'}</td></tr>
                 <tr><th>手機</th><td>{detail.phone}</td></tr>
                 <tr><th>產地</th><td>{detail.origin ?? '—'}</td></tr>
                 <tr><th>認證</th><td>{detail.cert ?? '—'}</td></tr>

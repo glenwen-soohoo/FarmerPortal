@@ -9,7 +9,10 @@ interface Store {
   farmers: Farmer[]
   products: Product[]
   currentFarmerId: number
+  setCurrentFarmerId: (id: number) => void // 開發用：切換目前登入農友
   printOrder: (id: string) => void
+  // 多箱追加補單：每補一張就多要一個物流編號（append，不改訂單狀態）
+  supplementOrder: (id: string, count?: number) => void
   shipOrder: (id: string) => void
   failOrder: (id: string, reason: string, altDate?: string) => void
   // 手動改單：覆寫欄位、判定狀態自動標「人工修正判定」、記稽核
@@ -26,7 +29,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>(seedOrders)
   const [farmers, setFarmers] = useState<Farmer[]>(seedFarmers)
   const [products, setProducts] = useState<Product[]>(seedProducts)
-  const currentFarmerId = 1
+  const [currentFarmerId, setCurrentFarmerId] = useState(6)
 
   const patch = (id: string, fn: (o: Order) => Order) =>
     setOrders((prev) => prev.map((o) => (o.id === id ? fn(o) : o)))
@@ -37,12 +40,23 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       farmers,
       products,
       currentFarmerId,
+      setCurrentFarmerId,
       printOrder: (id) =>
         patch(id, (o) => ({
           ...o,
           shipStatus: '已印單',
           printedAt: new Date().toLocaleString('zh-TW'),
         })),
+      supplementOrder: (id, count = 1) =>
+        patch(id, (o) => {
+          const existing = o.trackingNos ?? []
+          // 每補一張＝多一個黑貓物流編號；示範號依現有數量遞增
+          const added = Array.from(
+            { length: count },
+            (_, i) => `9009${o.id.padStart(3, '0')}${String(existing.length + i + 1).padStart(3, '0')}`
+          )
+          return { ...o, trackingNos: [...existing, ...added] }
+        }),
       shipOrder: (id) => patch(id, (o) => ({ ...o, shipStatus: '已出貨' })),
       failOrder: (id, reason, altDate) =>
         patch(id, (o) => ({
@@ -76,7 +90,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       setEarlyShip: (farmerId, allow) =>
         setFarmers((prev) => prev.map((f) => (f.id === farmerId ? { ...f, earlyShipAllowed: allow } : f))),
     }),
-    [orders, farmers, products]
+    [orders, farmers, products, currentFarmerId]
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

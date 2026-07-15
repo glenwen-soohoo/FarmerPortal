@@ -26,23 +26,48 @@ const TITLES: Record<string, string> = {
   '/farmer/shippable': '需出貨',
   '/farmer/upcoming': '出貨預告',
   '/farmer/preview': '備貨總覽',
-  '/farmer/history': '出貨紀錄',
   '/farmer/all': '所有訂單',
   '/farmer/printer': '印表機設定',
   '/farmer/me': '我的設定',
 }
 
 // 「更多」收納的低頻分頁（≥560 底部分頁用）
-const MORE_ROUTES = ['/farmer/history', '/farmer/all', '/farmer/printer', '/farmer/me']
+const MORE_ROUTES = ['/farmer/all', '/farmer/printer', '/farmer/me']
 const MORE_ITEMS = [
   { to: '/farmer/all', label: '所有訂單查詢' },
-  { to: '/farmer/history', label: '出貨紀錄' },
   { to: '/farmer/printer', label: '印表機設定' },
   { to: '/farmer/me', label: '我的設定' },
 ]
 
+// 今日日期顯示：'YYYY-MM-DD' → 'M/D'
+function formatToday(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number)
+  return `${m}/${d}`
+}
+
+// 印表機狀態圖示（連線＝綠、未連線＝紅）
+function PrinterIcon({ connected }: { connected: boolean }) {
+  return (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={connected ? '#2E7D32' : '#C0392B'}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M6 9V3h12v6" />
+      <path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" />
+      <rect x="6" y="14" width="12" height="7" rx="1" />
+    </svg>
+  )
+}
+
 export default function FarmerLayout() {
-  const { orders, currentFarmerId, farmers } = useStore()
+  const { orders, currentFarmerId, farmers, setCurrentFarmerId } = useStore()
   const loc = useLocation()
   const navigate = useNavigate()
   const me = farmers.find((f) => f.id === currentFarmerId)
@@ -90,7 +115,6 @@ export default function FarmerLayout() {
     { to: '/farmer/upcoming', label: '出貨預告', count: upcomingCount },
     { to: '/farmer/preview', label: '備貨總覽' },
     { to: '/farmer/all', label: '所有訂單查詢' },
-    { to: '/farmer/history', label: '出貨紀錄' },
     { to: '/farmer/printer', label: '印表機設定' },
     { to: '/farmer/me', label: '我的設定' },
   ]
@@ -112,6 +136,9 @@ export default function FarmerLayout() {
         style={{ boxShadow: '0 3px 8px rgba(43,43,38,0.08)' }}
       >
         <div className="flex items-center gap-3">
+          {/* 最左：今日日期（與頁名同大、深綠色） */}
+          <span className="whitespace-nowrap text-2xl font-bold text-brand">{formatToday(today)}</span>
+          <span className="h-7 w-px shrink-0 bg-line" aria-hidden />
           <h1 className="text-2xl font-bold text-ink">{pageTitle}</h1>
           {loc.pathname === '/farmer/shippable' && forcedTodayCount > 0 && (
             <span className="inline-flex items-center rounded-full bg-danger/10 px-3 py-1 text-lg font-bold text-danger">
@@ -130,24 +157,20 @@ export default function FarmerLayout() {
             {drawerOpen ? '✕' : '☰'}
           </button>
         ) : (
-          <button
-            onClick={() => setPrinterConnected((v) => !v)}
-            className="flex items-center gap-2"
-            aria-label="印表機連線狀態"
-          >
-            <span
-              className="inline-block rounded-full"
-              style={{
-                width: 12,
-                height: 12,
-                background: printerConnected ? '#2E7D32' : '#C0392B',
-                boxShadow: `0 0 0 3px ${printerConnected ? 'rgba(46,125,50,0.18)' : 'rgba(192,57,43,0.15)'}`,
-              }}
-            />
-            <span className="text-base font-medium" style={{ color: printerConnected ? '#2E7D32' : '#C0392B' }}>
-              {printerConnected ? '印表機已連線' : '印表機未連線'}
-            </span>
-          </button>
+          /* 右上：果園名稱 + 印表機狀態圖示（已連線＝綠圖示；未連線＝紅圖示＋左側文字） */
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setPrinterConnected((v) => !v)}
+              className="flex items-center gap-2"
+              aria-label={printerConnected ? '印表機已連線' : '印表機未連線'}
+            >
+              {!printerConnected && (
+                <span className="whitespace-nowrap text-base font-medium text-danger">印表機未連線</span>
+              )}
+              <PrinterIcon connected={printerConnected} />
+            </button>
+            <span className="whitespace-nowrap text-lg font-bold text-ink">{me?.farm}</span>
+          </div>
         )}
 
         {/* 手機版漢堡展開的選單（蓋在內容上、含所有分頁與印表機狀態） */}
@@ -158,6 +181,8 @@ export default function FarmerLayout() {
               className="anim-slide-down absolute left-0 right-0 top-full z-40 max-h-[70vh] overflow-y-auto border-b border-line bg-white"
               style={{ boxShadow: '0 8px 20px rgba(43,43,38,0.18)' }}
             >
+              {/* 果園名稱 */}
+              <div className="border-b border-line px-5 py-3 text-lg font-bold text-ink">{me?.farm}</div>
               {drawerNav.map((it) => (
                 <button
                   key={it.to}
@@ -177,12 +202,9 @@ export default function FarmerLayout() {
                 style={{ minHeight: 52 }}
               >
                 <span className="text-ink2">印表機</span>
-                <span className="flex items-center gap-2 font-medium" style={{ color: printerConnected ? '#2E7D32' : '#C0392B' }}>
-                  <span
-                    className="inline-block rounded-full"
-                    style={{ width: 10, height: 10, background: printerConnected ? '#2E7D32' : '#C0392B' }}
-                  />
-                  {printerConnected ? '已連線' : '未連線'}
+                <span className="flex items-center gap-2">
+                  {!printerConnected && <span className="font-medium text-danger">未連線</span>}
+                  <PrinterIcon connected={printerConnected} />
                 </span>
               </button>
             </div>
@@ -265,6 +287,9 @@ export default function FarmerLayout() {
         upcomingCount={upcomingCount}
         earlyEligible={earlyEligible}
         onToggleEarly={() => setEarlyEligible((v) => !v)}
+        farmers={farmers}
+        currentFarmerId={currentFarmerId}
+        onChangeFarmer={setCurrentFarmerId}
       />
     </div>
   )

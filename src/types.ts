@@ -20,6 +20,9 @@ export type ShipStatus =
 
 export type TempLayer = '常溫' | '冷藏' | '冷凍'
 
+// 企業匯單分類（程式判定、非 AI；711 優先），見 F3 §2-2
+export type BulkOrderType = '一般' | '統一711' | '企業匯單'
+
 // 手動改單稽核
 export interface AuditEntry {
   by: string
@@ -46,16 +49,17 @@ export interface Order {
   farmerRemark: string // AI 產（Mongo）：給農友的作業備註（品種/數量/出貨動作）；農友端唯一顯示的備註
   driverRemark?: string // AI 產（Mongo）：印在物流單、給司機/物流的配送指示（放哪/電聯/易碎）
   csRemark?: string // SQL Orders.CustomerServiceRemark（客服備註、非 AI、不動）；補單記錄也續記於此
-  variety?: string // AI 清洗後品種名
+  variety?: string // 清洗後品種名（程式取品名【】內文字、非 AI，見 F3 §2-1）
+  bulkOrderType?: BulkOrderType // 企業匯單分類（程式判定、711 優先）：統一711=品名開頭 711；企業匯單=企業匯入單（下單會員電話 0900000000／RemarkFromAdmin 含「企業訂單匯入」）；一般=消費者單。見 F3 §2-2
   judgeReason?: string // AI 判定理由（唯讀，對應 AI 回傳的 reason）
-  confidence?: number // AI 判定信心 0–1（< 門檻 → 低信心）；judgeStatus 由 confidence + needsHuman 映射（見 F3 §4-2）
+  confidence?: number // AI 判定信心 0–1（< 門檻 → 低信心）；judgeStatus 由 confidence + needsHuman 映射（見 F3 §3-3）
   needsHuman?: boolean // AI 標記需人工（true → 判定失敗 / 轉人工）
   judgeStatus: JudgeStatus
   shipStatus: ShipStatus
   shipWindow?: [string, string] // 預定出貨區間 [起, 迄]（起日即農友端顯示的可出貨起始）
   blockedDates?: string[] // 不可出貨日（AI 判定，可複數：單日 "06/07" 或區間 "06/07–06/11"）
   forcedShipDate?: string // 強制指定出貨日（客人指定，MM/DD）
-  remoteAgentCode?: string // 偏遠地區客代
+  remoteAgentCode?: string // 偏遠客代（衍生自農友農園 Farmer.remoteAgentCode、非看收件地；見 F4 §5）
   printedAt?: string
   trackingNos?: string[] // 黑貓物流單號（跟黑貓要號後才有；補單可多筆）
   failReason?: string // 農友回報「無法出貨」原因
@@ -66,12 +70,12 @@ export interface Order {
 
 export interface Farmer {
   id: number
-  name: string // 聯絡人姓名（註：現有 Farmer 主檔無此欄，聯絡方式為 Mobile/Email/LineId；此為 mock 補充）
   farm: string // 農場/主體名稱（對應 Farmer.Name）
   phone: string
   status: '未開通' | '已開通' | '已停用'
   lastLogin?: string
   earlyShipAllowed?: boolean // 提早出貨資格：可在未達出貨時間時提早印單
+  remoteAgentCode?: string // 偏遠客代（綁農園、依農園地址判定；偏遠農園才有，見 F4 §5）
   // 詳細資料（Farmer 主檔，master 在 Enzo，唯讀）
   brand?: string // 品牌（對應 Farmer.Brand，與農場名 farm 為不同欄位）
   origin?: string // 產地

@@ -3,7 +3,6 @@ import type { Order } from '../types'
 import { useStore } from '../store'
 import BigButton from './BigButton'
 import TempLayerTag from './TempLayerTag'
-import CleanRemark from './CleanRemark'
 import Tag from './Tag'
 import BtnLabel from './BtnLabel'
 import ConfirmDialog from './ConfirmDialog'
@@ -31,12 +30,13 @@ function windowText(o: Order) {
 }
 
 export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect, selectedQty = 1, onQtyChange, selectDisabled, earlyEligible, hideProduct, today }: Props) {
-  const { printOrder, failOrder } = useStore()
+  const { printOrder, supplementOrder, failOrder } = useStore()
   const [printing, setPrinting] = useState(false)
   const [printStep, setPrintStep] = useState<'preparing' | 'done'>('preparing')
   const [askReprint, setAskReprint] = useState(false)
   const [askEarly, setAskEarly] = useState(false)
   const [askSupplement, setAskSupplement] = useState(false)
+  const [supQty, setSupQty] = useState(1) // 追加補單：再多補印幾單（每單多一個物流編號）
   const [askFail, setAskFail] = useState(false)
   const [failNotice, setFailNotice] = useState(false)
   const [showRecipient, setShowRecipient] = useState(false) // 收件資訊預設收合
@@ -44,7 +44,6 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   const printed = order.shipStatus === '已印單'
   const shipped = order.shipStatus === '已出貨'
   const isReprint = needsReprint(order)
-  const forced = !!order.forcedShipDate // 指定出貨（用來決定是否隱藏「預計出貨」）
   // 時間相關標籤（互斥、一次一個）：逾期 > 指定今日 > 今日到期 > 指定日期 > 快到期
   const timeTag = today ? orderTimeTag(order, today) : null
 
@@ -52,16 +51,13 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   const rowCls = selectable && selected ? 'bg-mutedbg' : '' // 批次選中：中性淺底
   const dimmed = selectable && selectDisabled
 
-  // 已印單 / 已出貨：接在「預計出貨」後面同一行（whitespace-nowrap 不折行）
-  const statusNode = printed ? (
-    <span className="whitespace-nowrap text-lg font-bold text-muted">
-      已印單 ✓<span className="ml-2 text-sm font-normal text-muted">{order.printedAt}</span>
-    </span>
-  ) : shipped ? (
-    <span className="whitespace-nowrap text-lg font-bold text-muted">
-      已出貨 ✓<span className="ml-2 text-sm font-normal text-muted">{order.printedAt}</span>
-    </span>
+  // 已出貨標記接在「物流編號」後面（已印單標記已移除，狀態改由動作鈕表達）
+  const statusNode = shipped ? (
+    <span className="whitespace-nowrap text-lg font-bold text-muted">已出貨 ✓</span>
   ) : null
+
+  // 物流編號（黑貓單號）：出貨預告尚未取號→尚無；其餘列出所有單號（補單多筆，一個一行）
+  const trackingNos = upcoming ? [] : order.trackingNos ?? []
 
   const doPrint = () => {
     setAskReprint(false)
@@ -75,13 +71,17 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   }
   const onPrintClick = () => (printed ? setAskReprint(true) : doPrint())
 
-  // 多箱追加補單：多印一張補單，不改變訂單狀態
+  // 多箱追加補單：多印 N 單補單（每單多要一個物流編號），不改變訂單狀態
   const doSupplement = () => {
+    const n = supQty
     setAskSupplement(false)
     setPrinting(true)
     setPrintStep('preparing')
     window.setTimeout(() => setPrintStep('done'), 1200)
-    window.setTimeout(() => setPrinting(false), 2000)
+    window.setTimeout(() => {
+      setPrinting(false)
+      supplementOrder(order.id, n)
+    }, 2000)
   }
 
   return (
@@ -108,25 +108,60 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             </div>
           )}
 
-          {/* 預計出貨：放最上面（指定今日出貨時不顯示，避免與「今日」混淆）；已印單接在其後同一行 */}
-          {!forced ? (
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="text-base text-muted">預計出貨</span>
-              <span className="text-2xl font-bold text-brand">{windowText(order)}</span>
-              {statusNode}
-            </div>
-          ) : (
-            statusNode && <div>{statusNode}</div>
-          )}
-
-          {/* 規格 × 數量：自己一行、最大（與預計出貨分行，規格再長也不擠壓） */}
-          <div className="mt-2 text-3xl font-bold text-ink">
+          {/* 規格 × 數量：放最上、最大（規格再長也不擠壓） */}
+          <div className="text-3xl font-bold text-ink">
             {order.spec}　×{order.qty}
           </div>
 
-          {/* 出貨提醒 */}
-          <div className="mt-3">
-            <CleanRemark text={order.farmerRemark} />
+          {/* 預計出貨（我們原定出貨區間）；指定出貨也照樣顯示，方便對照原定區間 vs 客人指定日 */}
+          {order.shipWindow && (
+            <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-base text-muted">預計出貨</span>
+              <span className="text-2xl font-bold text-brand">{windowText(order)}</span>
+            </div>
+          )}
+
+          {/* 出貨提醒：標籤比照「預計出貨」的淡字；內文加略粗淺黃色底線強調 */}
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-base text-muted">出貨提醒</span>
+            {order.farmerRemark?.trim() ? (
+              <span
+                className="text-xl leading-relaxed text-ink"
+                style={{
+                  textDecorationLine: 'underline',
+                  textDecorationColor: '#F5DE7A',
+                  textDecorationThickness: '3px',
+                  textUnderlineOffset: '3px',
+                }}
+              >
+                {order.farmerRemark}
+              </span>
+            ) : (
+              <span className="text-lg text-muted">無</span>
+            )}
+          </div>
+
+          {/* 物流編號：放出貨提醒下面。尚未取號＝尚無；已取號列出所有黑貓單號（補單多出的往下對齊首號），已出貨標記接首號後 */}
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-base text-muted">物流編號</span>
+            {trackingNos.length > 0 ? (
+              <span className="inline-flex flex-col">
+                <span className="inline-flex items-baseline gap-x-3">
+                  <span className="text-xl font-bold tracking-wide text-ink">{trackingNos[0]}</span>
+                  {statusNode}
+                </span>
+                {trackingNos.slice(1).map((no) => (
+                  <span key={no} className="text-xl font-bold tracking-wide text-ink">
+                    {no}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              <>
+                <span className="text-lg text-ink2">尚無</span>
+                {statusNode}
+              </>
+            )}
           </div>
         </div>
 
@@ -174,7 +209,10 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
                 <BtnLabel parts={['重印', '相同貨單']} />
               </button>
               <button
-                onClick={() => setAskSupplement(true)}
+                onClick={() => {
+                  setSupQty(1)
+                  setAskSupplement(true)
+                }}
                 className="flex-1 rounded border-2 border-accent text-xl font-bold text-amberink active:bg-accent/5"
                 style={{ minHeight: 60 }}
               >
@@ -215,10 +253,12 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             )
           ) : (
             <>
-              {/* 未印：印單＝唯一主鈕，最大最醒目 */}
+              {/* 未印：印單＝唯一主鈕，最大最醒目。改單待重印用土黃色(amberink)區隔（提醒是改過的單） */}
               <button
                 onClick={onPrintClick}
-                className="flex-1 rounded bg-brand text-3xl font-bold text-white active:bg-brand-dark"
+                className={`flex-1 rounded text-3xl font-bold text-white ${
+                  isReprint ? 'bg-amberink active:opacity-90' : 'bg-brand active:bg-brand-dark'
+                }`}
                 style={{ minHeight: 120 }}
               >
                 印單
@@ -310,8 +350,38 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
       {askSupplement && (
         <ConfirmDialog
           title="多箱追加補單"
-          message={`為「${order.recipient} 的訂單」多印一張補單（追加箱數用）？不會改變訂單狀態。`}
-          confirmText="列印補單"
+          message={
+            <div>
+              <p>
+                為「{order.recipient} 的訂單」加印補單（追加箱數用），不會改變訂單狀態；每多補一單會多要一個物流編號。
+              </p>
+              <div className="mt-5 flex items-center gap-4">
+                <span className="text-lg text-ink">再多補印</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSupQty((q) => Math.max(1, q - 1))}
+                    disabled={supQty <= 1}
+                    className="rounded border-2 border-line bg-white text-2xl font-bold text-ink disabled:opacity-40"
+                    style={{ width: 48, height: 48 }}
+                    aria-label="減少補印單數"
+                  >
+                    −
+                  </button>
+                  <span className="w-10 text-center text-3xl font-bold text-ink">{supQty}</span>
+                  <button
+                    onClick={() => setSupQty((q) => q + 1)}
+                    className="rounded border-2 border-line bg-white text-2xl font-bold text-ink"
+                    style={{ width: 48, height: 48 }}
+                    aria-label="增加補印單數"
+                  >
+                    ＋
+                  </button>
+                </div>
+                <span className="text-lg text-ink">單</span>
+              </div>
+            </div>
+          }
+          confirmText={`列印補單（${supQty} 單）`}
           onConfirm={doSupplement}
           onCancel={() => setAskSupplement(false)}
         />

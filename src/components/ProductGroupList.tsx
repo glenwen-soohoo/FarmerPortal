@@ -40,7 +40,7 @@ interface Props {
 }
 
 export default function ProductGroupList({ orders, mode, earlyEligible, setNavLocked, today }: Props) {
-  const { printOrder, failOrder } = useStore()
+  const { printOrder, supplementOrder, failOrder } = useStore()
   const groups = toGroups(orders)
 
   // 批次只能針對「同一商品」→ 用 batchProduct 鎖定目前批次的商品
@@ -86,9 +86,12 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
   const doPrint = () => {
     setConfirming(false)
     setPrinting(true)
-    const ids = [...sel.keys()]
+    const entries = [...sel.entries()]
     window.setTimeout(() => {
-      ids.forEach((id) => printOrder(id)) // 補印為多印幾張，狀態一樣進「已印單」
+      entries.forEach(([id, qty]) => {
+        printOrder(id) // 狀態進「已印單」
+        if (qty > 1) supplementOrder(id, qty - 1) // 超出 1 張的份數＝補單，每張多一個物流編號
+      })
       setPrinting(false)
       cancel()
     }, 1600)
