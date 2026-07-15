@@ -37,7 +37,7 @@ export default function DevPanel({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="fixed bottom-4 right-4 z-40" style={{ fontFamily: "'Noto Sans TC', sans-serif" }}>
+    <div className="fixed bottom-20 right-4 z-40" style={{ fontFamily: "'Noto Sans TC', sans-serif" }}>
       {open ? (
         <div
           className="w-72 rounded-lg p-3 text-white shadow-lg"
