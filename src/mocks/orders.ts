@@ -1,6 +1,5 @@
 import type { Order } from '../types'
 import { seedFarmers } from './farmers'
-import { isShipReached, DEFAULT_DEV_TODAY } from '../utils/shipDate'
 
 // 收件人姓名 / 電話皆為虛構。備註取自真實情境，涵蓋各判定/出貨狀態。
 // 兩軸：judgeStatus（判定）× shipStatus（出貨）。
@@ -545,11 +544,11 @@ export const seedOrders: Order[] = [
   },
 ]
 
-// 物流編號依「出貨起始日」判定（黑貓在達出貨區間時才排程要號）：
-// 以測試日 6/12 為準，已達出貨起始日(含指定出貨日)的單一律要有物流編號；
-// 6/12 之後才開始出的單尚未要號 → 無物流編號（顯示「尚無」）。
+// 物流編號＝按過印單才有（每次印單即時要新號）。示範資料只給「已印過」的狀態帶號，
+// 其餘（可出貨/未達出貨/未付款/逾期/失敗）一律尚無；改單待重印＝先前印過故留舊號可重印。
+const PRINTED_STATUS = ['已印單', '改單待重印', '已出貨', '已到貨']
 seedOrders.forEach((o) => {
-  if (isShipReached(o, DEFAULT_DEV_TODAY)) {
+  if (PRINTED_STATUS.includes(o.shipStatus)) {
     if (!o.trackingNos || o.trackingNos.length === 0) {
       o.trackingNos = [`9007${o.id.padStart(3, '0')}5678`]
     }

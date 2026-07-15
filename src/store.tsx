@@ -10,7 +10,8 @@ interface Store {
   products: Product[]
   currentFarmerId: number
   setCurrentFarmerId: (id: number) => void // 開發用：切換目前登入農友
-  printOrder: (id: string) => void
+  // 印單：每次都即時要新號（count 張＝count 個新物流編號），覆蓋既有號
+  printOrder: (id: string, count?: number) => void
   // 多箱追加補單：每補一張就多要一個物流編號（append，不改訂單狀態）
   supplementOrder: (id: string, count?: number) => void
   shipOrder: (id: string) => void
@@ -41,12 +42,15 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       products,
       currentFarmerId,
       setCurrentFarmerId,
-      printOrder: (id) =>
-        patch(id, (o) => ({
-          ...o,
-          shipStatus: '已印單',
-          printedAt: new Date().toLocaleString('zh-TW'),
-        })),
+      printOrder: (id, count = 1) =>
+        patch(id, (o) => {
+          // 每次印單即時要新號：產生 count 個新的黑貓物流編號，覆蓋原本的
+          const nums = Array.from(
+            { length: Math.max(1, count) },
+            (_, i) => `9010${o.id.padStart(3, '0')}${String(i + 1).padStart(3, '0')}`
+          )
+          return { ...o, shipStatus: '已印單', printedAt: new Date().toLocaleString('zh-TW'), trackingNos: nums }
+        }),
       supplementOrder: (id, count = 1) =>
         patch(id, (o) => {
           const existing = o.trackingNos ?? []

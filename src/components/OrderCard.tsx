@@ -33,7 +33,10 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   const { printOrder, supplementOrder, failOrder } = useStore()
   const [printing, setPrinting] = useState(false)
   const [printStep, setPrintStep] = useState<'preparing' | 'done'>('preparing')
-  const [askReprint, setAskReprint] = useState(false)
+  const [askPrint, setAskPrint] = useState(false) // 印單彈窗：一次產生 N 個新物流編號
+  const [printQty, setPrintQty] = useState(1)
+  const [askReprint, setAskReprint] = useState(false) // 重印彈窗：沿用既有單號、可勾選
+  const [reprintSel, setReprintSel] = useState<Set<string>>(new Set())
   const [askEarly, setAskEarly] = useState(false)
   const [askSupplement, setAskSupplement] = useState(false)
   const [supQty, setSupQty] = useState(1) // 追加補單：再多補印幾單（每單多一個物流編號）
@@ -59,29 +62,47 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   // 物流編號（黑貓單號）：出貨預告尚未取號→尚無；其餘列出所有單號（補單多筆，一個一行）
   const trackingNos = upcoming ? [] : order.trackingNos ?? []
 
-  const doPrint = () => {
-    setAskReprint(false)
+  // 跑一段「準備中…→取單」列印動畫後執行 after
+  const runPrintAnim = (after?: () => void) => {
     setPrinting(true)
     setPrintStep('preparing')
     window.setTimeout(() => setPrintStep('done'), 1200)
     window.setTimeout(() => {
       setPrinting(false)
-      printOrder(order.id)
+      after?.()
     }, 2000)
   }
-  const onPrintClick = () => (printed ? setAskReprint(true) : doPrint())
+  // 印單：即時產生 count 個新物流編號並列印（狀態→已印單）
+  const doPrint = (count: number) => {
+    setAskPrint(false)
+    setAskEarly(false)
+    runPrintAnim(() => printOrder(order.id, count))
+  }
+  // 重印：沿用勾選的既有單號重印，不產生新號、不改資料
+  const doReprint = () => {
+    setAskReprint(false)
+    runPrintAnim()
+  }
+  const openPrint = () => {
+    setPrintQty(1)
+    setAskPrint(true)
+  }
+  const openReprint = () => {
+    setReprintSel(new Set(trackingNos))
+    setAskReprint(true)
+  }
+  const toggleReprint = (no: string) =>
+    setReprintSel((prev) => {
+      const n = new Set(prev)
+      n.has(no) ? n.delete(no) : n.add(no)
+      return n
+    })
 
   // 多箱追加補單：多印 N 單補單（每單多要一個物流編號），不改變訂單狀態
   const doSupplement = () => {
     const n = supQty
     setAskSupplement(false)
-    setPrinting(true)
-    setPrintStep('preparing')
-    window.setTimeout(() => setPrintStep('done'), 1200)
-    window.setTimeout(() => {
-      setPrinting(false)
-      supplementOrder(order.id, n)
-    }, 2000)
+    runPrintAnim(() => supplementOrder(order.id, n))
   }
 
   return (
@@ -141,21 +162,41 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             )}
           </div>
 
-          {/* 物流編號：放出貨提醒下面。尚未取號＝尚無；已取號列出所有黑貓單號（補單多出的往下對齊首號），已出貨標記接首號後 */}
+          {/* 物流編號：放出貨提醒下面。尚未取號＝尚無；已取號列出所有黑貓單號。
+              批次選中時，號碼後面由上往下標「✓＝即將印出」（份數幾張就前幾張打勾） */}
           <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="text-base text-muted">物流編號</span>
             {trackingNos.length > 0 ? (
-              <span className="inline-flex flex-col">
-                <span className="inline-flex items-baseline gap-x-3">
-                  <span className="text-xl font-bold tracking-wide text-ink">{trackingNos[0]}</span>
-                  {statusNode}
-                </span>
-                {trackingNos.slice(1).map((no) => (
-                  <span key={no} className="text-xl font-bold tracking-wide text-ink">
-                    {no}
-                  </span>
-                ))}
+              <span className="inline-flex flex-col gap-y-0.5">
+                {trackingNos.map((no, i) => {
+                  const marking = selectable && selected // 批次選中才顯示「即將印出」勾選
+                  const willPrint = i < selectedQty
+                  return (
+                    <span key={no} className="inline-flex items-baseline gap-x-2">
+                      <span
+                        className={`text-xl font-bold tracking-wide ${
+                          isReprint ? 'text-danger line-through' : marking && !willPrint ? 'text-muted' : 'text-ink'
+                        }`}
+                      >
+                        {no}
+                      </span>
+                      {marking && willPrint && (
+                        <span className="text-lg font-bold text-brand" aria-hidden>
+                          ✓
+                        </span>
+                      )}
+                      {i === 0 && statusNode}
+                    </span>
+                  )
+                })}
+                {/* 份數超過既有號：最下面補「＋N 張新號」表示會多要幾個新單號 */}
+                {selectable && selected && selectedQty > trackingNos.length && (
+                  <span className="text-lg font-bold text-brand">＋{selectedQty - trackingNos.length} 張新號</span>
+                )}
               </span>
+            ) : selectable && selected ? (
+              // 尚無號的單在批次選中時，顯示即將產生的新號張數
+              <span className="text-lg font-bold text-brand">＋{selectedQty} 張新號</span>
             ) : (
               <>
                 <span className="text-lg text-ink2">尚無</span>
@@ -202,7 +243,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             <>
               {/* 已印單（含提早印單）：重印＝綠框、追加補單＝黃框，皆撐滿高度；無法出貨壓最底 */}
               <button
-                onClick={onPrintClick}
+                onClick={openReprint}
                 className="flex-1 rounded border-2 border-brand text-xl font-bold text-brand active:bg-brand/5"
                 style={{ minHeight: 60 }}
               >
@@ -255,7 +296,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             <>
               {/* 未印：印單＝唯一主鈕，最大最醒目。改單待重印用土黃色(amberink)區隔（提醒是改過的單） */}
               <button
-                onClick={onPrintClick}
+                onClick={openPrint}
                 className={`flex-1 rounded text-3xl font-bold text-white ${
                   isReprint ? 'bg-amberink active:opacity-90' : 'bg-brand active:bg-brand-dark'
                 }`}
@@ -326,24 +367,97 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
         </div>
       )}
 
-      {askReprint && (
+      {/* 印單：一次可產生多張（每張即時要一個新物流編號） */}
+      {askPrint && (
         <ConfirmDialog
-          title="重新列印"
-          message="確定要再印一次嗎？"
-          confirmText="再印一次"
-          onConfirm={doPrint}
-          onCancel={() => setAskReprint(false)}
+          title="列印出貨單"
+          message={
+            <div>
+              <p>一次可產生多張出貨單，每張都會即時向黑貓要一個新的物流編號。</p>
+              <div className="mt-5 flex items-center gap-4">
+                <span className="text-lg text-ink">印</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setPrintQty((q) => Math.max(1, q - 1))}
+                    disabled={printQty <= 1}
+                    className="rounded border-2 border-line bg-white text-2xl font-bold text-ink disabled:opacity-40"
+                    style={{ width: 48, height: 48 }}
+                    aria-label="減少張數"
+                  >
+                    −
+                  </button>
+                  <span className="w-10 text-center text-3xl font-bold text-ink">{printQty}</span>
+                  <button
+                    onClick={() => setPrintQty((q) => q + 1)}
+                    className="rounded border-2 border-line bg-white text-2xl font-bold text-ink"
+                    style={{ width: 48, height: 48 }}
+                    aria-label="增加張數"
+                  >
+                    ＋
+                  </button>
+                </div>
+                <span className="text-lg text-ink">張</span>
+              </div>
+            </div>
+          }
+          confirmText={`列印（${printQty} 張）`}
+          onConfirm={() => doPrint(printQty)}
+          onCancel={() => setAskPrint(false)}
         />
+      )}
+      {/* 重印相同貨單：沿用既有單號；多筆時可勾選要重印哪幾張（預設全選） */}
+      {askReprint && (
+        <div
+          className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.4)' }}
+          onClick={() => setAskReprint(false)}
+        >
+          <div className="anim-pop w-full max-w-md rounded-card bg-white p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-2xl font-bold text-ink">重印相同貨單</h3>
+            {trackingNos.length > 1 ? (
+              <>
+                <p className="mt-3 text-lg text-ink2">勾選要重印的物流編號（沿用原單號、不會產生新號）：</p>
+                <div className="mt-3 space-y-2">
+                  {trackingNos.map((no) => {
+                    const checked = reprintSel.has(no)
+                    return (
+                      <label
+                        key={no}
+                        className="flex cursor-pointer items-center gap-3 rounded-lg border-2 px-4 py-3"
+                        style={{ borderColor: checked ? '#1F6E43' : '#E5E1D8' }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleReprint(no)}
+                          style={{ width: 20, height: 20, accentColor: '#1F6E43' }}
+                        />
+                        <span className="text-xl font-bold tracking-wide text-ink">{no}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="mt-3 text-lg text-ink2">沿用原單號 {trackingNos[0]} 重印一次（不會產生新號）。</p>
+            )}
+            <div className="mt-6 flex justify-end gap-3">
+              <BigButton variant="secondary" onClick={() => setAskReprint(false)}>
+                取消
+              </BigButton>
+              <BigButton disabled={reprintSel.size === 0} onClick={doReprint}>
+                {trackingNos.length > 1 ? `重印（${reprintSel.size} 張）` : '重印'}
+              </BigButton>
+            </div>
+          </div>
+        </div>
       )}
       {askEarly && (
         <ConfirmDialog
           title="提早印單"
           message={EARLY_SHIP_WARNING}
           confirmText="我了解，仍要提早印單"
-          onConfirm={() => {
-            setAskEarly(false)
-            doPrint()
-          }}
+          onConfirm={() => doPrint(1)}
           onCancel={() => setAskEarly(false)}
         />
       )}

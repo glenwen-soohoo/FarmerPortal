@@ -69,10 +69,15 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
     setConfirming(false)
     setFailing(false)
   }
+  // 批次預設份數＝該單已取的物流編號數量（先印舊單）；尚無號者至少 1 張
+  const defaultQty = (id: string) => {
+    const o = orders.find((x) => x.id === id)
+    return Math.max(1, o?.trackingNos?.length ?? 0)
+  }
   const toggle = (id: string) =>
     setSel((prev) => {
       const n = new Map(prev)
-      n.has(id) ? n.delete(id) : n.set(id, 1)
+      n.has(id) ? n.delete(id) : n.set(id, defaultQty(id))
       return n
     })
   const addQty = (id: string, delta: number) =>
@@ -89,8 +94,14 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
     const entries = [...sel.entries()]
     window.setTimeout(() => {
       entries.forEach(([id, qty]) => {
-        printOrder(id) // 狀態進「已印單」
-        if (qty > 1) supplementOrder(id, qty - 1) // 超出 1 張的份數＝補單，每張多一個物流編號
+        const o = orders.find((x) => x.id === id)
+        const existing = o?.trackingNos?.length ?? 0
+        if (existing === 0) {
+          printOrder(id, qty) // 尚無號：首印，產生 qty 個新號、轉已印單
+        } else if (qty > existing) {
+          supplementOrder(id, qty - existing) // 先印舊單、超出既有號的部分才補新號
+        }
+        // qty ≤ existing：沿用既有號重印，資料不變
       })
       setPrinting(false)
       cancel()
@@ -116,7 +127,7 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
             setSel(() => {
               if (allSelected) return new Map()
               const n = new Map<string, number>()
-              g.orders.forEach((o) => n.set(o.id, sel.get(o.id) ?? 1))
+              g.orders.forEach((o) => n.set(o.id, sel.get(o.id) ?? defaultQty(o.id)))
               return n
             })
           const temps = [...new Set(g.orders.map((o) => o.tempLayer))]
