@@ -38,6 +38,17 @@ body {
   line-height: 1.6;
 }
 
+/* 農友端數量輸入框：隱藏 type=number 內建上下微調箭頭（增減一律用外面的 ＋/− 按鈕） */
+.farmer-scope input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.farmer-scope input[type='number']::-webkit-outer-spin-button,
+.farmer-scope input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 /* ── 暗示性進場動畫（彈窗 / 展開收合）：淡入 + 輕微位移/縮放，讓切換不生硬 ── */
 @keyframes gbFade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes gbPop { from { opacity: 0; transform: translateY(8px) scale(0.97) } to { opacity: 1; transform: none } }

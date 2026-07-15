@@ -10,8 +10,9 @@ interface Store {
   products: Product[]
   currentFarmerId: number
   setCurrentFarmerId: (id: number) => void // 開發用：切換目前登入農友
-  // 印單：每次都即時要新號（count 張＝count 個新物流編號），覆蓋既有號
-  printOrder: (id: string, count?: number) => void
+  // 印單：每次都即時要新號（count 張＝count 個新物流編號），覆蓋既有號。
+  // devToday（'YYYY-MM-DD'）＝【DEMO 專屬】用開發面板測試日期當印單日，見下方實作註解
+  printOrder: (id: string, count?: number, devToday?: string) => void
   // 多箱追加補單：每補一張就多要一個物流編號（append，不改訂單狀態）
   supplementOrder: (id: string, count?: number) => void
   shipOrder: (id: string) => void
@@ -42,14 +43,20 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       products,
       currentFarmerId,
       setCurrentFarmerId,
-      printOrder: (id, count = 1) =>
+      printOrder: (id, count = 1, devToday) =>
         patch(id, (o) => {
           // 每次印單即時要新號：產生 count 個新的黑貓物流編號，覆蓋原本的
           const nums = Array.from(
             { length: Math.max(1, count) },
             (_, i) => `9010${o.id.padStart(3, '0')}${String(i + 1).padStart(3, '0')}`
           )
-          return { ...o, shipStatus: '已印單', printedAt: new Date().toLocaleString('zh-TW'), trackingNos: nums }
+          // 【DEMO 專屬邏輯】此為測試機：印單日改用「開發面板的測試日期」而非真實今天，
+          // 否則備貨總覽「印單未出」用測試日期篩「印單日」會抓不到剛印的單（真實日期 ≠ 測試日期）。
+          // 正式環境請拿掉 devToday、一律用 new Date()。時間仍取真實時分讓顯示自然。
+          const now = new Date()
+          const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+          const printedAt = devToday ? `${devToday} ${hhmm}` : now.toLocaleString('zh-TW')
+          return { ...o, shipStatus: '已印單', printedAt, trackingNos: nums }
         }),
       supplementOrder: (id, count = 1) =>
         patch(id, (o) => {

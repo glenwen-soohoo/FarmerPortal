@@ -31,14 +31,29 @@ interface FilterOpts {
 }
 
 // 觸發鈕（顯示目前值 + ▾）。定義在模組層級，元件識別穩定，避免每次 render 重掛載導致輸入焦點丟失。
-function Trigger({ value, placeholder, onClick }: { value: string; placeholder: string; onClick: () => void }) {
+function Trigger({
+  value,
+  placeholder,
+  onClick,
+  disabled,
+}: {
+  value: string
+  placeholder: string
+  onClick: () => void
+  disabled?: boolean
+}) {
   return (
     <button
-      onClick={onClick}
-      className="flex flex-1 items-center justify-between rounded-lg border border-line bg-white px-3 text-left"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      className={`flex flex-1 items-center justify-between rounded-lg border border-line px-3 text-left ${
+        disabled ? 'cursor-not-allowed bg-mutedbg' : 'bg-white'
+      }`}
       style={{ minHeight: 52 }}
     >
-      <span className="text-lg font-medium text-ink">{value || placeholder}</span>
+      <span className={`text-lg font-medium ${disabled ? 'text-muted' : value ? 'text-ink' : 'text-muted'}`}>
+        {value || placeholder}
+      </span>
       <span className="text-ink2">▾</span>
     </button>
   )
@@ -85,14 +100,20 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
   const [ship, setShip] = useState<ShipGroup>('shipped') // 預設「已出貨」
   const [picker, setPicker] = useState<null | 'from' | 'to' | 'name' | 'spec'>(null)
 
-  const nameOptions = useMemo(() => uniq(orders.map((o) => o.productName).filter(Boolean)), [orders])
-  const specOptions = useMemo(() => uniq(orders.map((o) => o.spec).filter(Boolean)), [orders])
+  // 商品名選項/比對用「清洗後品種 variety」（退回 productName）；避免下拉顯示完整原始品名（中秋嚴選【…】…）
+  const cleanName = (o: Order) => (o.variety && o.variety.trim()) || o.productName
+  const nameOptions = useMemo(() => uniq(orders.map(cleanName).filter(Boolean)), [orders])
+  // 規格只列「已選商品」底下的規格；未選商品則不可選
+  const specOptions = useMemo(
+    () => (name ? uniq(orders.filter((o) => cleanName(o) === name).map((o) => o.spec).filter(Boolean)) : []),
+    [orders, name]
+  )
 
   const kw = keyword.trim()
   const filtered = orders.filter(
     (o) =>
       inDayRange(o.shipWindow?.[0], from.trim(), to.trim()) &&
-      (!name || o.productName === name) &&
+      (!name || cleanName(o) === name) &&
       (!spec || o.spec === spec) &&
       (!withStatus || ship === 'all' || shipGroupOf(o.shipStatus) === ship) &&
       (!withKeyword ||
@@ -144,7 +165,7 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
           {advanced ? (
             <Row label="商品規格">
               <Trigger value={name} placeholder="全部商品" onClick={() => setPicker('name')} />
-              <Trigger value={spec} placeholder="全部規格" onClick={() => setPicker('spec')} />
+              <Trigger value={spec} placeholder={name ? '全部規格' : '請先選商品'} disabled={!name} onClick={() => setPicker('spec')} />
             </Row>
           ) : (
             <>
@@ -152,7 +173,7 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
                 <Trigger value={name} placeholder="全部" onClick={() => setPicker('name')} />
               </Row>
               <Row label="規格">
-                <Trigger value={spec} placeholder="全部" onClick={() => setPicker('spec')} />
+                <Trigger value={spec} placeholder={name ? '全部' : '請先選商品'} disabled={!name} onClick={() => setPicker('spec')} />
               </Row>
             </>
           )}
@@ -213,7 +234,16 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
         <CalendarPicker title="出貨日（迄）" value={to} onSelect={setTo} onClose={() => setPicker(null)} />
       )}
       {picker === 'name' && (
-        <Picker title="商品名" options={opt(nameOptions)} value={name} onSelect={setName} onClose={() => setPicker(null)} />
+        <Picker
+          title="商品名"
+          options={opt(nameOptions)}
+          value={name}
+          onSelect={(v) => {
+            setName(v)
+            setSpec('') // 換商品就清掉舊規格（規格是跟著商品的）
+          }}
+          onClose={() => setPicker(null)}
+        />
       )}
       {picker === 'spec' && (
         <Picker title="規格" options={opt(specOptions)} value={spec} onSelect={setSpec} onClose={() => setPicker(null)} />

@@ -227,7 +227,11 @@ export default function FarmerLayout() {
       {!isNarrow && (
       <nav
         className="relative z-10 flex shrink-0 border-t border-line bg-white"
-        style={{ boxShadow: '0 -3px 8px rgba(43,43,38,0.08)', ...(navLocked ? { pointerEvents: 'none' } : {}) }}
+        style={{
+          boxShadow: '0 -3px 8px rgba(43,43,38,0.08)',
+          // 批次模式：整條選單改灰底、文字再淺（不可點）
+          ...(navLocked ? { pointerEvents: 'none', background: '#F0EDE6', opacity: 0.6 } : {}),
+        }}
       >
         {tabs.map((t) => (
           <NavLink

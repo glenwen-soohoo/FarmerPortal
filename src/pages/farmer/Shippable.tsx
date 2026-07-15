@@ -4,6 +4,7 @@ import ProductGroupList from '../../components/ProductGroupList'
 import { EmptyState } from '../../components/States'
 import { useListFilter } from '../../components/ListFilter'
 import { useBulkTypeFilter } from '../../components/BulkTypeToggle'
+import FilterBar from '../../components/FilterBar'
 import { isInShippablePage, sortForFarmer } from '../../utils/shipDate'
 import type { FarmerOutletCtx } from './FarmerLayout'
 
@@ -24,13 +25,15 @@ export default function Shippable() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-start gap-3">
-        {toggle}
-        <div className="ml-auto w-full max-w-sm">
-          {filterButton}
-          {filterPanel}
-        </div>
-      </div>
+      <FilterBar
+        toggle={toggle}
+        filter={
+          <>
+            {filterButton}
+            {filterPanel}
+          </>
+        }
+      />
       {filtered.length === 0 ? (
         <EmptyState message="沒有符合篩選的單" />
       ) : (

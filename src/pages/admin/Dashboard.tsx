@@ -21,6 +21,11 @@ interface Query {
   judge: string[]
 }
 const EMPTY: Query = { kw: '', from: '', to: '', ship: [], judge: [] }
+// 進頁預設：出貨狀態只看「進行中 / 需處理」，隱藏 未付款 / 已出貨 / 已到貨 / 訂單失敗
+const DEFAULT_QUERY: Query = {
+  kw: '', from: '', to: '', judge: [],
+  ship: ['未達出貨時間', '可出貨', '已印單', '改單待重印', '逾期未出', '無法出貨'],
+}
 
 // order 的 MM/DD → 可比較的 YYYY-MM-DD（mock 統一 2026 年）
 const norm = (mmdd?: string) => {
@@ -88,8 +93,8 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const farmerName = (id: number) => farmers.find((f) => f.id === id)?.farm ?? `#${id}`
 
-  const [form, setForm] = useState<Query>(EMPTY)
-  const [applied, setApplied] = useState<Query>(EMPTY)
+  const [form, setForm] = useState<Query>(DEFAULT_QUERY)
+  const [applied, setApplied] = useState<Query>(DEFAULT_QUERY)
 
   const rows = useMemo(() => {
     const k = applied.kw.trim()
@@ -178,6 +183,7 @@ export default function Dashboard() {
                 <th>預定出貨區間</th>
                 <th>出貨判定</th>
                 <th>給農友備註</th>
+                <th>農友印單時間</th>
                 <th className="cell-ops">操作</th>
               </tr>
             </thead>
@@ -234,6 +240,11 @@ export default function Dashboard() {
                     )}
                   </td>
                   <td style={{ maxWidth: 220, color: o.farmerRemark ? 'var(--gox-text)' : 'var(--gox-text-muted)' }}>{o.farmerRemark || '—'}</td>
+                  <td style={{ whiteSpace: 'nowrap', color: o.printedAt ? 'var(--gox-text)' : 'var(--gox-text-muted)' }}>
+                    {o.printedAt
+                      ? (() => { const [d, t] = o.printedAt.split(' '); return <>{d}<br />{t}</> })()
+                      : '尚未印單'}
+                  </td>
                   <td className="cell-ops">
                     <button className="gox-btn-op" onClick={() => navigate(`/admin/orders/${o.id}`)}>詳情 / 改單</button>
                   </td>

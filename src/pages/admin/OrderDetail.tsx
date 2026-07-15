@@ -9,6 +9,9 @@ import type { Order, ShipStatus } from '../../types'
 const SHIP_OPTIONS: ShipStatus[] = [
   '未付款', '未達出貨時間', '可出貨', '已印單', '改單待重印', '已出貨', '已到貨', '逾期未出', '無法出貨', '訂單失敗',
 ]
+// 「印過單」才會有的貨態：物流單號在印單時才產生，故這些狀態一定有號。
+// 沒號的單（可出貨 / 未達出貨 / 未付款…尚未印單）禁止直接切到這些狀態（防呆）。
+const REQUIRES_TRACKING: ShipStatus[] = ['已印單', '改單待重印', '已出貨', '已到貨']
 const FIELD_LABEL: Record<string, string> = {
   variety: '清洗品種名', shipWindow: '預定出貨區間', blockedDates: '不可出貨日',
   forcedShipDate: '指定出貨日', remoteAgentCode: '偏遠客代',
@@ -74,6 +77,7 @@ export default function OrderDetail() {
   }
 
   const farm = farmers.find((f) => f.id === o.farmerId)?.farm
+  const hasTracking = (o.trackingNos?.length ?? 0) > 0
 
   const setB = (i: number, patch: Partial<BItem>) => setBlocked((prev) => prev.map((x, idx) => (idx === i ? { ...x, ...patch } : x)))
   const removeB = (i: number) => setBlocked((prev) => prev.filter((_, idx) => idx !== i))
@@ -84,6 +88,10 @@ export default function OrderDetail() {
     if (winFrom && winTo && winFrom > winTo) { setErr('預定出貨區間：起日不可晚於迄日'); return }
     const badRange = blocked.find((it) => it.kind === 'range' && it.a && it.b && it.a > it.b)
     if (badRange) { setErr('不可出貨日區間：起日不可晚於迄日'); return }
+    if (!hasTracking && REQUIRES_TRACKING.includes(shipStatus)) {
+      setErr(`「${shipStatus}」是印過單才會有的貨態；此訂單尚未印單取號，不能直接切到這個狀態。`)
+      return
+    }
     setErr('')
     const patch: Partial<Order> = {
       variety,
@@ -256,9 +264,17 @@ export default function OrderDetail() {
             <div className="gox-form-row">
               <label>出貨狀態</label>
               <select className="gox-select" value={shipStatus} onChange={(e) => setShipStatus(e.target.value as ShipStatus)}>
-                {SHIP_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                {SHIP_OPTIONS.map((s) => {
+                  const locked = !hasTracking && REQUIRES_TRACKING.includes(s)
+                  return <option key={s} value={s} disabled={locked}>{s}{locked ? '（尚未印單）' : ''}</option>
+                })}
               </select>
             </div>
+            {!hasTracking && (
+              <div className="gox-hint" style={{ marginTop: -4, marginBottom: 8 }}>
+                此訂單尚未印單取號，無法直接切到「印過單」的貨態（已印單 / 改單待重印 / 已出貨 / 已到貨）；物流單號會在印單時才產生。
+              </div>
+            )}
 
             {err && <div style={{ color: 'var(--gox-danger)', fontSize: 13, marginBottom: 8 }}>{err}</div>}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

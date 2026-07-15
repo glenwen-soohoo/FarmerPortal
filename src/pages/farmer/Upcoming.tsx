@@ -4,6 +4,7 @@ import ProductGroupList from '../../components/ProductGroupList'
 import { EmptyState } from '../../components/States'
 import { useListFilter } from '../../components/ListFilter'
 import { useBulkTypeFilter } from '../../components/BulkTypeToggle'
+import FilterBar from '../../components/FilterBar'
 import { isInUpcomingPage, sortForFarmer } from '../../utils/shipDate'
 import type { FarmerOutletCtx } from './FarmerLayout'
 
@@ -21,13 +22,15 @@ export default function Upcoming() {
   return (
     <div>
       <p className="mb-3 text-lg text-ink2">這些還沒到出貨時間，先看就好，時間到會自動跳到「需出貨」。</p>
-      <div className="mb-4 flex flex-wrap items-start gap-3">
-        {toggle}
-        <div className="ml-auto w-full max-w-sm">
-          {filterButton}
-          {filterPanel}
-        </div>
-      </div>
+      <FilterBar
+        toggle={toggle}
+        filter={
+          <>
+            {filterButton}
+            {filterPanel}
+          </>
+        }
+      />
       {filtered.length === 0 ? (
         <EmptyState message={list.length === 0 ? '目前沒有預告中的單' : '沒有符合篩選的單'} />
       ) : (

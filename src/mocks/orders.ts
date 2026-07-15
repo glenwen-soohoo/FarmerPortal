@@ -450,7 +450,7 @@ export const seedOrders: Order[] = [
     shipWindow: ['06/05', '06/18'], forcedShipDate: '06/12',
   },
 
-  // ── 農友 6：冠軍文旦園 · 一般消費者單（bulkOrderType 省略＝一般）；3 品種、麻豆文旦 3 規格、涵蓋各狀態，供農園展示 ──
+  // ── 農友 6：冠軍文旦園 · 一般消費者單（bulkOrderType 省略＝一般）；3 品種、文旦 3 規格、涵蓋各狀態，供農園展示 ──
   {
     id: '50', orderNumber: '260605861050', farmerId: 6,
     recipient: '王士豪', phone: '0919000050', address: '台北市大安區敦化南路二段63號8樓',

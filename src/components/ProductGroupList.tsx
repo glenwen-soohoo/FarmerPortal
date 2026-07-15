@@ -61,7 +61,11 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
 
   const enter = (p: string) => {
     setBatchProduct(p)
-    setSel(new Map())
+    // 進批次預設全部打勾（含已有物流編號者），份數帶各單預設值
+    const grp = groups.find((g) => g.product === p)
+    const n = new Map<string, number>()
+    grp?.orders.forEach((o) => n.set(o.id, defaultQty(o.id)))
+    setSel(n)
   }
   const cancel = () => {
     setBatchProduct(null)
@@ -69,15 +73,24 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
     setConfirming(false)
     setFailing(false)
   }
-  // 批次預設份數＝該單已取的物流編號數量（先印舊單）；尚無號者至少 1 張
+  // 批次預設份數＝該單已取的物流編號數量（先印舊單）；尚無號者至少 1 張。
+  // 改單待重印：舊號作廢、直接印新號，故不算既有號、預設 1 張。
   const defaultQty = (id: string) => {
     const o = orders.find((x) => x.id === id)
+    if (o?.shipStatus === '改單待重印') return 1
     return Math.max(1, o?.trackingNos?.length ?? 0)
   }
   const toggle = (id: string) =>
     setSel((prev) => {
       const n = new Map(prev)
       n.has(id) ? n.delete(id) : n.set(id, defaultQty(id))
+      return n
+    })
+  const setQty = (id: string, value: number) =>
+    setSel((prev) => {
+      if (!prev.has(id)) return prev
+      const n = new Map(prev)
+      n.set(id, Math.max(1, value))
       return n
     })
   const addQty = (id: string, delta: number) =>
@@ -96,8 +109,8 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
       entries.forEach(([id, qty]) => {
         const o = orders.find((x) => x.id === id)
         const existing = o?.trackingNos?.length ?? 0
-        if (existing === 0) {
-          printOrder(id, qty) // 尚無號：首印，產生 qty 個新號、轉已印單
+        if (o?.shipStatus === '改單待重印' || existing === 0) {
+          printOrder(id, qty, today) // 改單待重印(舊號作廢)或尚無號：直接印 qty 個新號、轉已印單；today＝DEMO 印單日
         } else if (qty > existing) {
           supplementOrder(id, qty - existing) // 先印舊單、超出既有號的部分才補新號
         }
@@ -217,6 +230,7 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
                         selectedQty={sel.get(o.id) ?? 1}
                         onToggleSelect={() => toggle(o.id)}
                         onQtyChange={(d) => addQty(o.id, d)}
+                        onQtySet={(v) => setQty(o.id, v)}
                         today={today}
                       />
                     ))}

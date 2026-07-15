@@ -18,6 +18,7 @@ interface Props {
   onToggleSelect?: () => void
   selectedQty?: number // 批次列印：此單要印幾張（1=原印，>1=含補印）
   onQtyChange?: (delta: number) => void
+  onQtySet?: (value: number) => void // 批次份數：直接輸入絕對值
   selectDisabled?: boolean // 此模式下該單不可勾選（如批次收貨時的非已印單）
   earlyEligible?: boolean // 有提早出貨資格：出貨預告的單可「提早印單」
   hideProduct?: boolean // 商品分組大卡片內：小卡不再顯示產品名 / 溫層（已在大卡標題）
@@ -29,7 +30,7 @@ function windowText(o: Order) {
   return '—'
 }
 
-export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect, selectedQty = 1, onQtyChange, selectDisabled, earlyEligible, hideProduct, today }: Props) {
+export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect, selectedQty = 1, onQtyChange, onQtySet, selectDisabled, earlyEligible, hideProduct, today }: Props) {
   const { printOrder, supplementOrder, failOrder } = useStore()
   const [printing, setPrinting] = useState(false)
   const [printStep, setPrintStep] = useState<'preparing' | 'done'>('preparing')
@@ -50,8 +51,9 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   // 時間相關標籤（互斥、一次一個）：逾期 > 指定今日 > 今日到期 > 指定日期 > 快到期
   const timeTag = today ? orderTimeTag(order, today) : null
 
-  // 群組容器內的一列：不用左邊色條 / 整列上色強調（見 #24 迭代）；狀態一律靠徽章表達。
-  const rowCls = selectable && selected ? 'bg-mutedbg' : '' // 批次選中：中性淺底
+  // 群組容器內的一列：逾期未出（顯示逾期標籤者）＝淡粉紅底提醒；否則批次選中＝中性淺底
+  const overdue = timeTag?.label === '逾期未出'
+  const rowCls = overdue ? 'bg-danger/10' : selectable && selected ? 'bg-mutedbg' : ''
   const dimmed = selectable && selectDisabled
 
   // 已出貨標記接在「物流編號」後面（已印單標記已移除，狀態改由動作鈕表達）
@@ -76,7 +78,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   const doPrint = (count: number) => {
     setAskPrint(false)
     setAskEarly(false)
-    runPrintAnim(() => printOrder(order.id, count))
+    runPrintAnim(() => printOrder(order.id, count, today)) /* today＝開發面板測試日，DEMO 用來當印單日 */
   }
   // 重印：沿用勾選的既有單號重印，不產生新號、不改資料
   const doReprint = () => {
@@ -170,7 +172,8 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               <span className="inline-flex flex-col gap-y-0.5">
                 {trackingNos.map((no, i) => {
                   const marking = selectable && selected // 批次選中才顯示「即將印出」勾選
-                  const willPrint = i < selectedQty
+                  // 改單待重印：舊號作廢直接印新號 → 舊號不打勾；其餘沿用舊號、前 N 張打勾
+                  const willPrint = !isReprint && i < selectedQty
                   return (
                     <span key={no} className="inline-flex items-baseline gap-x-2">
                       <span
@@ -189,10 +192,13 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
                     </span>
                   )
                 })}
-                {/* 份數超過既有號：最下面補「＋N 張新號」表示會多要幾個新單號 */}
-                {selectable && selected && selectedQty > trackingNos.length && (
-                  <span className="text-lg font-bold text-brand">＋{selectedQty - trackingNos.length} 張新號</span>
-                )}
+                {/* 改單待重印＝整批都是新號(份數)；其餘＝份數超過既有號的部分才是新號 */}
+                {selectable && selected && (() => {
+                  const newCount = isReprint ? selectedQty : selectedQty - trackingNos.length
+                  return newCount > 0 ? (
+                    <span className="text-lg font-bold text-brand">＋{newCount} 張新號</span>
+                  ) : null
+                })()}
               </span>
             ) : selectable && selected ? (
               // 尚無號的單在批次選中時，顯示即將產生的新號張數
@@ -297,12 +303,19 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               {/* 未印：印單＝唯一主鈕，最大最醒目。改單待重印用土黃色(amberink)區隔（提醒是改過的單） */}
               <button
                 onClick={openPrint}
-                className={`flex-1 rounded text-3xl font-bold text-white ${
-                  isReprint ? 'bg-amberink active:opacity-90' : 'bg-brand active:bg-brand-dark'
+                className={`flex-1 rounded font-bold text-white ${
+                  isReprint ? 'bg-amberink active:opacity-90' : 'bg-brand text-3xl active:bg-brand-dark'
                 }`}
                 style={{ minHeight: 120 }}
               >
-                印單
+                {isReprint ? (
+                  <span className="flex flex-col items-center leading-tight">
+                    <span className="text-2xl">印單</span>
+                    <span className="mt-1 whitespace-nowrap text-sm">取新物流編號</span>
+                  </span>
+                ) : (
+                  '印單'
+                )}
               </button>
               <BigButton variant="danger" size="md" className="oc-fail" style={{ minHeight: 44, height: 44 }} onClick={() => setAskFail(true)}>
                 無法出貨
@@ -340,8 +353,16 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               >
                 ＋
               </button>
-              <span className="whitespace-nowrap">
-                <span className="text-2xl font-bold text-ink">{selectedQty}</span>
+              <span className="flex items-baseline whitespace-nowrap">
+                <input
+                  type="number"
+                  min={1}
+                  value={selectedQty}
+                  onChange={(e) => onQtySet?.(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                  className="w-12 rounded border-2 border-line text-center text-2xl font-bold text-ink"
+                  style={{ height: 40 }}
+                  aria-label="份數"
+                />
                 <span className="ml-1 text-sm text-muted">張</span>
               </span>
               <button
@@ -386,7 +407,15 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
                   >
                     −
                   </button>
-                  <span className="w-10 text-center text-3xl font-bold text-ink">{printQty}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={printQty}
+                    onChange={(e) => setPrintQty(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                    className="w-16 rounded border-2 border-line text-center text-3xl font-bold text-ink"
+                    style={{ height: 48 }}
+                    aria-label="列印張數"
+                  />
                   <button
                     onClick={() => setPrintQty((q) => q + 1)}
                     className="rounded border-2 border-line bg-white text-2xl font-bold text-ink"
@@ -481,7 +510,15 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
                   >
                     −
                   </button>
-                  <span className="w-10 text-center text-3xl font-bold text-ink">{supQty}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={supQty}
+                    onChange={(e) => setSupQty(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                    className="w-16 rounded border-2 border-line text-center text-3xl font-bold text-ink"
+                    style={{ height: 48 }}
+                    aria-label="補印單數"
+                  />
                   <button
                     onClick={() => setSupQty((q) => q + 1)}
                     className="rounded border-2 border-line bg-white text-2xl font-bold text-ink"
