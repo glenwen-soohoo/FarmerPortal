@@ -28,6 +28,13 @@ export default function Home() {
           狀態流程說明
           <div className="mt-1 text-sm font-normal text-ink2">判定 × 出貨 流程圖</div>
         </Link>
+        <Link
+          to="/ai-lab"
+          className="rounded-card border border-line bg-white px-10 py-8 text-center text-xl font-bold text-ink"
+        >
+          AI 判定測試台
+          <div className="mt-1 text-sm font-normal text-ink2">規劃階段 · 本地串接 AI</div>
+        </Link>
       </div>
     </div>
   )

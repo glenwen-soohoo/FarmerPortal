@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Home from './pages/Home'
 import FlowDoc from './pages/FlowDoc'
+import AiLab from './pages/AiLab'
 import FarmerLayout from './pages/farmer/FarmerLayout'
 import Login from './pages/farmer/Login'
 import Shippable from './pages/farmer/Shippable'
@@ -18,6 +19,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/flow" element={<FlowDoc />} />
+      <Route path="/ai-lab" element={<AiLab />} />
 
       {/* 農友端 */}
       <Route path="/farmer/login" element={<Login />} />
