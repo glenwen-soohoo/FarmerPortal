@@ -60,7 +60,14 @@ async function callGemini(cfg: AiConfig, system: string, user: string): Promise<
   const body = {
     system_instruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: [{ text: user }] }],
-    generationConfig: { temperature: cfg.temperature, responseMimeType: 'application/json' },
+    generationConfig: {
+      temperature: cfg.temperature,
+      responseMimeType: 'application/json',
+      // 2.5/3 flash 預設會「思考」、思考 token 會吃掉輸出額度導致 JSON 被截斷。
+      // 這種結構化抽取不需要思考 → 關掉；並拉高輸出上限確保 JSON 印得完。
+      maxOutputTokens: 8192,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   }
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,

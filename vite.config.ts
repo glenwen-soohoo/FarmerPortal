@@ -8,5 +8,14 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: true,
     port: 5191,
+    // 本地開發代理：AI 測試台抓國定假日表（gb-order-api）避開瀏覽器 CORS。
+    // 僅 dev 用；正式環境 AI 判定在後端 server-side 呼叫、無此需求。
+    proxy: {
+      '/api/holiday': {
+        target: 'https://gb-order-api.azurewebsites.net',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
 }))

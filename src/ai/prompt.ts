@@ -39,7 +39,7 @@ export const DEFAULT_SYSTEM_PROMPT = `你是「無毒農」產地直送的出貨
 - ⭐ 照客人講的日期原樣填（到貨↔出貨的天數位移由系統換算，你不要自己加減天數）。
 - 需要換算才知道哪幾天的，⭐ 你「還是要盡量換算成日期」寫進 blockedDates，但**因為可能算錯、一律標低信心**（見第六點）：
   - 星期／頻率：「只週五出」「一到四出」「只收平日」→ 換算成 defaultShipWindow 區間內符合的日期（把不符合的日子列為不可）；週日本來就不出貨、不用列。
-  - 依賴節慶／連假的：「端午連假不在」「中秋前」→ 盡量換算成日期；真的判斷不出是哪天再退回 farmerRemark 文字。
+  - 依賴節慶／連假的：「端午連假不在」「中秋前」→ 盡量換算成日期；真的判斷不出是哪天再退回 farmerRemark 文字。（若下方母單後附有「國定假日對照」表，請直接查表換算，會更準。）
 - 只講時段、對不到「哪一天」的（如「早上才收得到」）→ 不要放 blockedDates，改放 driverRemark／farmerRemark 文字。
 - 只標「不可」的日子；沒被標到的日子系統自然當作可出，你不用列可出貨日。
 
@@ -91,7 +91,8 @@ export const DEFAULT_SYSTEM_PROMPT = `你是「無毒農」產地直送的出貨
 }
 每一張子單都要有一筆對應的 result。`
 
-// User 內容：帶入 §3-2 的母單 JSON（純資料，指令都在 system）
-export function buildUserContent(master: MasterInput): string {
-  return '這是一張母單，請依規則逐子單判定並回傳 JSON：\n\n' + JSON.stringify(master, null, 2)
+// User 內容：帶入 §3-2 的母單 JSON（純資料，指令都在 system）；可選附上國定假日對照供節慶換算
+export function buildUserContent(master: MasterInput, holidayBlock?: string): string {
+  const base = '這是一張母單，請依規則逐子單判定並回傳 JSON：\n\n' + JSON.stringify(master, null, 2)
+  return holidayBlock ? base + '\n\n' + holidayBlock : base
 }

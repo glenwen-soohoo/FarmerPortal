@@ -4,8 +4,9 @@ import type { CallResult, MasterInput, MasterItem, Provider } from '../ai/types'
 import { callAI } from '../ai/providers'
 import { PROVIDER_LABEL } from '../ai/providers'
 import { DEFAULT_SYSTEM_PROMPT, buildUserContent } from '../ai/prompt'
-import { TEMPLATES, blankItem, blankMaster } from '../ai/templates'
+import { TEMPLATES, TEMPLATE_GROUPS, blankItem, blankMaster } from '../ai/templates'
 import { useAiConfig } from '../ai/config'
+import { fetchHolidays, holidayPromptBlock, type HolidayData } from '../ai/holidays'
 
 const PROVIDERS: Provider[] = ['gemini', 'openai', 'anthropic']
 const TEMPS: string[] = ['常溫', '冷藏', '冷凍']
@@ -63,9 +64,16 @@ export default function AiLab() {
   const [system, setSystem] = useState(DEFAULT_SYSTEM_PROMPT)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<CallResult | null>(null)
+  const [holidays, setHolidays] = useState<HolidayData | null>(null)
+  const [holidayLoading, setHolidayLoading] = useState(false)
+  const [holidayErr, setHolidayErr] = useState('')
+  const [useHolidays, setUseHolidays] = useState(true)
 
   const provider = cfg.provider
   const hasKey = !!cfg.apiKeys[provider]?.trim()
+  const year = Number(master.orderDate.slice(0, 4)) || 2026
+  // 這次判定實際要不要附上假日表
+  const activeHolidayBlock = holidays && useHolidays ? holidayPromptBlock(holidays) : undefined
 
   const patchMaster = (p: Partial<MasterInput>) => setMaster((m) => ({ ...m, ...p }))
   const patchItem = (i: number, p: Partial<MasterItem>) =>
@@ -73,10 +81,25 @@ export default function AiLab() {
   const addItem = () => setMaster((m) => ({ ...m, items: [...m.items, blankItem()] }))
   const removeItem = (i: number) => setMaster((m) => ({ ...m, items: m.items.filter((_, idx) => idx !== i) }))
 
+  const loadHolidays = async () => {
+    setHolidayLoading(true)
+    setHolidayErr('')
+    try {
+      const h = await fetchHolidays(year)
+      setHolidays(h)
+      setUseHolidays(true)
+    } catch (e) {
+      setHolidays(null)
+      setHolidayErr((e as Error).message)
+    } finally {
+      setHolidayLoading(false)
+    }
+  }
+
   const run = async () => {
     setLoading(true)
     setResult(null)
-    const r = await callAI(cfg, system, buildUserContent(master))
+    const r = await callAI(cfg, system, buildUserContent(master, activeHolidayBlock))
     setResult(r)
     setLoading(false)
   }
@@ -124,13 +147,22 @@ export default function AiLab() {
 
         {/* 母單輸入 */}
         <Section title="② 母單輸入" desc="選一個範本帶入後手動改；或清空從零建。rawRemark 是 AI 唯一的自由文字來源。">
-          <div className="flex flex-wrap gap-2">
-            {TEMPLATES.map((t) => (
-              <button key={t.key} onClick={() => setMaster(t.data)} title={t.hint} className="rounded-lg border border-line bg-white px-3 py-1.5 text-sm text-ink hover:border-brand">
-                {t.label}
-              </button>
-            ))}
-            <button onClick={() => setMaster(blankMaster())} className="rounded-lg border border-dashed border-line bg-white px-3 py-1.5 text-sm text-ink2">清空</button>
+          <div className="space-y-2">
+            {TEMPLATE_GROUPS.map((g, gi) => {
+              const items = TEMPLATES.filter((t) => t.group === g)
+              return (
+                <Collapse key={g} title={`${g}（${items.length}）`} defaultOpen={gi === 0}>
+                  <div className="flex flex-wrap gap-2">
+                    {items.map((t) => (
+                      <button key={t.key} onClick={() => setMaster(t.data)} title={t.hint} className="rounded-lg border border-line bg-white px-3 py-1.5 text-sm text-ink hover:border-brand">
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </Collapse>
+              )
+            })}
+            <button onClick={() => setMaster(blankMaster())} className="rounded-lg border border-dashed border-line bg-white px-3 py-1.5 text-sm text-ink2">清空母單</button>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -146,6 +178,38 @@ export default function AiLab() {
             <Field label="carrierLeadDays（黑貓到貨天數）">
               <input className={inputCls} type="number" value={master.carrierLeadDays} onChange={(e) => patchMaster({ carrierLeadDays: Number(e.target.value) })} />
             </Field>
+          </div>
+
+          {/* 國定假日表：抓 gb-order-api（本地經 Vite proxy），注入 prompt 供 AI 換算節慶/連假 */}
+          <div className="mt-3 rounded-lg border border-line bg-mutedbg p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={loadHolidays}
+                disabled={holidayLoading}
+                className="rounded-lg border border-brand px-3 py-1.5 text-sm font-bold text-brand disabled:opacity-40"
+              >
+                {holidayLoading ? '載入中…' : `載入 ${year} 國定假日表`}
+              </button>
+              {holidays && (
+                <label className="flex items-center gap-2 text-sm text-ink">
+                  <input type="checkbox" checked={useHolidays} onChange={(e) => setUseHolidays(e.target.checked)} />
+                  判定時帶入（{holidays.nationalHolidays.length} 個國定假日；另 {holidays.weekendCount} 個六日不逐列）
+                </label>
+              )}
+              {holidayErr && <span className="text-sm text-danger">載入失敗：{holidayErr}</span>}
+            </div>
+            {holidays && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {holidays.nationalHolidays.map((x) => (
+                  <span key={x.date} className="rounded-full border border-line bg-white px-2 py-0.5 text-xs text-ink2">
+                    {x.date} {x.name}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="mt-2 text-xs text-muted">
+              來源 gb-order-api /api/holiday/{year}（本地經 Vite proxy 避 CORS）；正式環境由後端 server-side 取。
+            </p>
           </div>
 
           <div className="mt-3">
@@ -213,14 +277,14 @@ export default function AiLab() {
         </div>
 
         {/* 結果 */}
-        {result && <ResultView result={result} master={master} system={system} threshold={cfg.confidenceThreshold} />}
+        {result && <ResultView result={result} master={master} system={system} threshold={cfg.confidenceThreshold} holidayBlock={activeHolidayBlock} />}
       </div>
     </div>
   )
 }
 
 // ── 結果檢視 ───────────────────────────────────────────────
-function ResultView({ result, master, system, threshold }: { result: CallResult; master: MasterInput; system: string; threshold: number }) {
+function ResultView({ result, master, system, threshold, holidayBlock }: { result: CallResult; master: MasterInput; system: string; threshold: number; holidayBlock?: string }) {
   const itemOf = (orderId: number) => master.items.find((it) => it.orderId === orderId)
   const resultIds = new Set(result.parsed?.results.map((r) => r.orderId) ?? [])
   const missing = master.items.filter((it) => !resultIds.has(it.orderId))
@@ -298,8 +362,8 @@ function ResultView({ result, master, system, threshold }: { result: CallResult;
               <pre className="overflow-x-auto whitespace-pre-wrap break-words text-ink2">{system}</pre>
             </div>
             <div>
-              <div className="mb-1 font-bold text-ink2">User（母單 JSON）</div>
-              <pre className="overflow-x-auto whitespace-pre-wrap break-words text-ink2">{buildUserContent(master)}</pre>
+              <div className="mb-1 font-bold text-ink2">User（母單 JSON{holidayBlock ? ' + 國定假日對照' : ''}）</div>
+              <pre className="overflow-x-auto whitespace-pre-wrap break-words text-ink2">{buildUserContent(master, holidayBlock)}</pre>
             </div>
             {result.requestBody && (
               <div>
