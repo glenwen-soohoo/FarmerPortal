@@ -49,6 +49,7 @@ export const seedOrders: Order[] = [
     judgeReason: '到貨日 6/6→依黑貓天數反推、6/6 前標不可出貨',
     judgeStatus: 'AI判定完成', shipStatus: '可出貨',
     shipWindow: ['06/05', '06/18'], blockedDates: ['06/05'],
+    cancelledAt: '06/11', // DEMO：未印被取消（需出貨頁示範已取消卡片）
   },
   {
     id: '6', orderNumber: '260525841006', farmerId: 1,
@@ -65,6 +66,7 @@ export const seedOrders: Order[] = [
     rawRemark: '6/20後再寄出', farmerRemark: '6/20 後才可出貨', driverRemark: '偏遠地區，配送前請先電聯',
     judgeStatus: 'AI判定完成', shipStatus: '未達出貨時間',
     shipWindow: ['06/20', '07/03'],
+    cancelledAt: '06/10', // DEMO：未印被取消（出貨預告頁示範已取消卡片）
   },
   {
     id: '8', orderNumber: '260526841008', farmerId: 1,
@@ -308,6 +310,7 @@ export const seedOrders: Order[] = [
     bulkOrderType: '統一711',
     judgeStatus: 'AI判定完成', shipStatus: '可出貨',
     shipWindow: ['06/05', '06/18'], forcedShipDate: '06/13',
+    cancelledAt: '06/12', // DEMO：未印被取消（農友6 需出貨頁示範已取消卡片）
   },
   {
     id: '35', orderNumber: '260615711035', farmerId: 6,

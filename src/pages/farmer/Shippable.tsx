@@ -5,7 +5,7 @@ import { EmptyState } from '../../components/States'
 import { useListFilter } from '../../components/ListFilter'
 import { useBulkTypeFilter } from '../../components/BulkTypeToggle'
 import FilterBar from '../../components/FilterBar'
-import { isInShippablePage, sortForFarmer } from '../../utils/shipDate'
+import { isInShippablePage, isCancelHidden, sortForFarmer } from '../../utils/shipDate'
 import type { FarmerOutletCtx } from './FarmerLayout'
 
 export default function Shippable() {
@@ -13,7 +13,7 @@ export default function Shippable() {
   const { setNavLocked, today } = useOutletContext<FarmerOutletCtx>()
 
   const list = sortForFarmer(
-    orders.filter((o) => o.farmerId === currentFarmerId && isInShippablePage(o, today)),
+    orders.filter((o) => o.farmerId === currentFarmerId && isInShippablePage(o, today) && !isCancelHidden(o, today)),
     today
   )
   const { filtered: byType, toggle } = useBulkTypeFilter(list)

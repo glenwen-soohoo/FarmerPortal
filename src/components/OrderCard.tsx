@@ -7,7 +7,7 @@ import Tag from './Tag'
 import BtnLabel from './BtnLabel'
 import ConfirmDialog from './ConfirmDialog'
 import FailDialog from './FailDialog'
-import { EARLY_SHIP_WARNING, orderTimeTag, needsReprint } from '../utils/shipDate'
+import { EARLY_SHIP_WARNING, orderTimeTag, needsReprint, isCancelActive } from '../utils/shipDate'
 
 interface Props {
   order: Order
@@ -31,7 +31,7 @@ function windowText(o: Order) {
 }
 
 export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect, selectedQty = 1, onQtyChange, onQtySet, selectDisabled, earlyEligible, hideProduct, today }: Props) {
-  const { printOrder, supplementOrder, failOrder } = useStore()
+  const { printOrder, supplementOrder, failOrder, dismissCancel } = useStore()
   const [printing, setPrinting] = useState(false)
   const [printStep, setPrintStep] = useState<'preparing' | 'done'>('preparing')
   const [askPrint, setAskPrint] = useState(false) // 印單彈窗：一次產生 N 個新物流編號
@@ -48,12 +48,24 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   const printed = order.shipStatus === '已印單'
   const shipped = order.shipStatus === '已出貨'
   const isReprint = needsReprint(order)
+  const cancelled = today ? isCancelActive(order, today) : !!order.cancelledAt // 已取消（保留 7 天內）
   // 時間相關標籤（互斥、一次一個）：逾期 > 指定今日 > 今日到期 > 指定日期 > 快到期
   const timeTag = today ? orderTimeTag(order, today) : null
 
-  // 群組容器內的一列：逾期未出（顯示逾期標籤者）＝淡粉紅底提醒；否則批次選中＝中性淺底
-  const overdue = timeTag?.label === '逾期未出'
-  const rowCls = overdue ? 'bg-danger/10' : selectable && selected ? 'bg-mutedbg' : ''
+  // 卡片底色急迫度階梯（只對需提醒狀態上色、鋪滿整卡，色值取自 theme、不自訂/不漸層）：
+  //   已取消灰 > 逾期紅 > 今日必出深橙 > 改單重印橘 > 快到期淺琥珀 > (批次選中中性灰) > 白
+  const label = timeTag?.label
+  const rowCls = cancelled
+    ? 'bg-mutedbg'
+    : label === '逾期未出'
+      ? 'bg-danger/[0.16]'
+      : label === '今日到期' || label === '客人指定今日出貨'
+        ? 'bg-cardhot/[0.2]'
+        : isReprint || label === '快到期'
+          ? 'bg-cardwarn/[0.17]'
+          : selectable && selected
+            ? 'bg-mutedbg'
+            : ''
   const dimmed = selectable && selectDisabled
 
   // 已出貨標記接在「物流編號」後面（已印單標記已移除，狀態改由動作鈕表達）
@@ -111,18 +123,25 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
     <div className={`oc-row flex items-stretch gap-4 p-5 ${rowCls}`} style={{ opacity: dimmed ? 0.45 : 1 }}>
       {/* 左：訂單資訊。順序依「對農友的重要性」：規格數量 → 出貨提醒 → 出貨日 → (收合)收件資訊 */}
       <div className="min-w-0 flex-1">
-        {(timeTag || isReprint) && (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {/* 時間相關標籤：互斥，一次只一個 */}
-            {timeTag && <Tag tone={timeTag.tone}>{timeTag.label}</Tag>}
-            {/* 更新重印：非時間標籤，可與時間標籤並存 */}
-            {isReprint && <Tag tone="orange">已更新，請重印</Tag>}
+        {cancelled ? (
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center rounded-full bg-muted/20 px-3 py-0.5 text-lg font-bold text-ink">已取消</span>
+            <span className="text-base text-ink2">此單已取消，無需出貨</span>
           </div>
+        ) : (
+          (timeTag || isReprint) && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {/* 時間相關標籤：互斥，一次只一個 */}
+              {timeTag && <Tag tone={timeTag.tone}>{timeTag.label}</Tag>}
+              {/* 更新重印：非時間標籤，可與時間標籤並存 */}
+              {isReprint && <Tag tone="orange">已更新，請重印</Tag>}
+            </div>
+          )
         )}
 
         <div
-          className={selectable && !selectDisabled ? 'w-full cursor-pointer text-left' : 'w-full text-left'}
-          onClick={selectable && !selectDisabled ? () => onToggleSelect?.() : undefined}
+          className={selectable && !selectDisabled && !cancelled ? 'w-full cursor-pointer text-left' : 'w-full text-left'}
+          onClick={selectable && !selectDisabled && !cancelled ? () => onToggleSelect?.() : undefined}
         >
           {!hideProduct && (
             <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -131,8 +150,8 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             </div>
           )}
 
-          {/* 規格 × 數量：放最上、最大（規格再長也不擠壓） */}
-          <div className="text-3xl font-bold text-ink">
+          {/* 規格 × 數量：放最上、最大（規格再長也不擠壓）。已取消＝刪除線淡字 */}
+          <div className={`text-3xl font-bold ${cancelled ? 'text-muted line-through' : 'text-ink'}`}>
             {order.spec}　×{order.qty}
           </div>
 
@@ -242,8 +261,21 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
         )}
       </div>
 
-      {/* 右：動作區。已出貨=唯讀無按鈕；批次勾選模式下隱藏 */}
-      {!selectable && !shipped && (
+      {/* 已取消：無出貨動作，只給「知道了」提早收起（保留 7 天） */}
+      {cancelled && (
+        <div className="oc-action flex shrink-0 flex-col justify-center">
+          <button
+            onClick={() => dismissCancel(order.id)}
+            className="rounded bg-ink text-lg font-bold text-white active:opacity-80"
+            style={{ minHeight: 60 }}
+          >
+            知道了
+          </button>
+        </div>
+      )}
+
+      {/* 右：動作區。已出貨=唯讀無按鈕；批次勾選模式下隱藏；已取消不顯示 */}
+      {!cancelled && !selectable && !shipped && (
         <div className="oc-action flex shrink-0 flex-col gap-2">
           {printed ? (
             <>
@@ -325,8 +357,8 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
         </div>
       )}
 
-      {/* 批次模式：勾選框 + 補印份數。桌機/平板：＋−上下、勾選框在上；手機：整組移右下、勾選框在右、份數在左 */}
-      {selectable && (
+      {/* 批次模式：勾選框 + 補印份數。桌機/平板：＋−上下、勾選框在上；手機：整組移右下、勾選框在右、份數在左。已取消不可勾選 */}
+      {!cancelled && selectable && (
         <div className="oc-select flex shrink-0 flex-col items-center gap-4 self-start">
           <button
             onClick={selectDisabled ? undefined : onToggleSelect}

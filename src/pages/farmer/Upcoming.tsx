@@ -5,7 +5,7 @@ import { EmptyState } from '../../components/States'
 import { useListFilter } from '../../components/ListFilter'
 import { useBulkTypeFilter } from '../../components/BulkTypeToggle'
 import FilterBar from '../../components/FilterBar'
-import { isInUpcomingPage, sortForFarmer } from '../../utils/shipDate'
+import { isInUpcomingPage, isCancelHidden, sortForFarmer } from '../../utils/shipDate'
 import type { FarmerOutletCtx } from './FarmerLayout'
 
 export default function Upcoming() {
@@ -13,7 +13,7 @@ export default function Upcoming() {
   const { today, earlyEligible, setNavLocked } = useOutletContext<FarmerOutletCtx>()
 
   const list = sortForFarmer(
-    orders.filter((o) => o.farmerId === currentFarmerId && isInUpcomingPage(o, today)),
+    orders.filter((o) => o.farmerId === currentFarmerId && isInUpcomingPage(o, today) && !isCancelHidden(o, today)),
     today
   )
   const { filtered: byType, toggle } = useBulkTypeFilter(list)

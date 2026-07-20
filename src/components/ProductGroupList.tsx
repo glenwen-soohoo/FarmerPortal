@@ -5,7 +5,7 @@ import OrderCard from './OrderCard'
 import BigButton from './BigButton'
 import TempLayerTag from './TempLayerTag'
 import ConfirmDialog from './ConfirmDialog'
-import { EARLY_SHIP_WARNING } from '../utils/shipDate'
+import { EARLY_SHIP_WARNING, isCancelActive } from '../utils/shipDate'
 
 // 商品分區依「清洗後名稱」（variety→productName）
 const productKey = (o: Order) => (o.variety && o.variety.trim()) || o.productName
@@ -59,12 +59,14 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
   const showBatch = mode === 'print' || !!earlyEligible
   const labelCount = [...sel.values()].reduce((a, b) => a + b, 0) // 總張數（含補印）
 
+  // 已取消的單不可列印、不進批次
+  const printable = (o: Order) => !(today && isCancelActive(o, today))
   const enter = (p: string) => {
     setBatchProduct(p)
-    // 進批次預設全部打勾（含已有物流編號者），份數帶各單預設值
+    // 進批次預設全部打勾（含已有物流編號者、排除已取消），份數帶各單預設值
     const grp = groups.find((g) => g.product === p)
     const n = new Map<string, number>()
-    grp?.orders.forEach((o) => n.set(o.id, defaultQty(o.id)))
+    grp?.orders.filter(printable).forEach((o) => n.set(o.id, defaultQty(o.id)))
     setSel(n)
   }
   const cancel = () => {
@@ -135,12 +137,13 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
         {groups.map((g) => {
           const active = batchProduct === g.product
           const otherActive = batchProduct !== null && !active
-          const allSelected = active && g.orders.length > 0 && g.orders.every((o) => sel.has(o.id))
+          const printables = g.orders.filter(printable)
+          const allSelected = active && printables.length > 0 && printables.every((o) => sel.has(o.id))
           const toggleAll = () =>
             setSel(() => {
               if (allSelected) return new Map()
               const n = new Map<string, number>()
-              g.orders.forEach((o) => n.set(o.id, sel.get(o.id) ?? defaultQty(o.id)))
+              printables.forEach((o) => n.set(o.id, sel.get(o.id) ?? defaultQty(o.id)))
               return n
             })
           const temps = [...new Set(g.orders.map((o) => o.tempLayer))]

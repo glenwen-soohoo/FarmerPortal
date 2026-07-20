@@ -30,6 +30,9 @@ export default {
         orange: '#DE6A1B', // 橘：改單待重印
         orangeink: '#9A4A0E', // 橘標籤的深字色
         orangebg: '#FBE9D9', // 橘標籤淺底
+        // 卡片急迫度底色（比語意色更鮮明、彩度高，避免髒）：黃＝快到期/改單重印、橘＝指定今日/今日到期
+        cardwarn: '#FBE45E', // 黃
+        cardhot: '#FBAE4A', // 橘
         // 後台 admin
         admin: {
           primary: '#409eff',

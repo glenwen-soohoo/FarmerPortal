@@ -82,6 +82,22 @@ export function isInUpcomingPage(order: Order, todayIso: string): boolean {
   return timeBucket(order, todayIso) === 'upcoming'
 }
 
+// 兩個 ISO 日期相差天數（a - b）
+function daysBetween(aIso: string, bIso: string): number {
+  return Math.round((new Date(aIso).getTime() - new Date(bIso).getTime()) / 86400000)
+}
+
+// 已取消卡片是否還要顯示：有取消日、未按「知道了」、且取消後 7 天內（F0 §3-3 保留 7 天）
+export function isCancelActive(order: Order, todayIso: string): boolean {
+  if (!order.cancelledAt || order.cancelDismissed) return false
+  return daysBetween(todayIso, mmddToIso(order.cancelledAt)) <= 7
+}
+
+// 已取消但「該收起了」（已按知道了 或 超過 7 天）→ 從清單隱藏
+export function isCancelHidden(order: Order, todayIso: string): boolean {
+  return !!order.cancelledAt && !isCancelActive(order, todayIso)
+}
+
 // 訂單「急迫度」排名（數字小＝優先）：指定出貨 > 改單重印 > 快到期 > 一般(下單日)
 function urgencyRank(o: Order, todayIso: string): number {
   if (o.forcedShipDate) return 0 // 指定出貨

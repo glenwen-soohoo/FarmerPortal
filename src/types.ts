@@ -64,6 +64,9 @@ export interface Order {
   trackingNos?: string[] // 黑貓物流單號（跟黑貓要號後才有；補單可多筆）
   failReason?: string // 農友回報「無法出貨」原因
   rescheduledShipDate?: string // 貓咪改的新出貨日（配 failReason，MM/DD）
+  // 未印單被取消（F0 §3-3 軟刪除）：不再無聲消失，改標「已取消」灰卡、留原分頁、保留 7 天
+  cancelledAt?: string // 取消日期（MM/DD）；有值＝已取消
+  cancelDismissed?: boolean // 農友已按「知道了」→ 提早收起
   orderAmount?: number // 訂單金額（結算冗餘，非判定；真值以 SQL 為準）
   auditLog?: AuditEntry[]
 }

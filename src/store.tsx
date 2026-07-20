@@ -15,6 +15,8 @@ interface Store {
   printOrder: (id: string, count?: number, devToday?: string) => void
   // 多箱追加補單：每補一張就多要一個物流編號（append，不改訂單狀態）
   supplementOrder: (id: string, count?: number) => void
+  // 已取消卡片：農友按「知道了」→ 提早收起（F0 §3-3）
+  dismissCancel: (id: string) => void
   shipOrder: (id: string) => void
   failOrder: (id: string, reason: string, altDate?: string) => void
   // 手動改單：覆寫欄位、判定狀態自動標「人工修正判定」、記稽核
@@ -68,6 +70,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
           )
           return { ...o, trackingNos: [...existing, ...added] }
         }),
+      dismissCancel: (id) => patch(id, (o) => ({ ...o, cancelDismissed: true })),
       shipOrder: (id) => patch(id, (o) => ({ ...o, shipStatus: '已出貨' })),
       failOrder: (id, reason, altDate) =>
         patch(id, (o) => ({
