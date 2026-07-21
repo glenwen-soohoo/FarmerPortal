@@ -2,25 +2,13 @@ import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { useStore } from '../../store'
 import type { Order } from '../../types'
-import { isInShippablePage, isInUpcomingPage, orderTimeTag, needsReprint } from '../../utils/shipDate'
+import { isInShippablePage, isInUpcomingPage, orderTimeTag, needsReprint, sortForFarmer } from '../../utils/shipDate'
 import Tag, { type TagTone } from '../../components/Tag'
-import CalendarPicker from '../../components/CalendarPicker'
 import ShippingListModal from '../../components/ShippingListModal'
 import type { FarmerOutletCtx } from './FarmerLayout'
 
 // 清洗後的產品名（優先用 AI 清洗品種名 variety，退回原始 productName）
 const productName = (o: Order) => (o.variety && o.variety.trim()) || o.productName
-
-// 從 printedAt 取出 'MM/DD'（相容 'YYYY-MM-DD HH:mm' 與 toLocaleString 的 'YYYY/M/D …'）
-function printMMDD(o: Order): string | undefined {
-  const p = o.printedAt
-  if (!p) return undefined
-  let m = p.match(/\d{4}-(\d{2})-(\d{2})/)
-  if (m) return `${m[1]}/${m[2]}`
-  m = p.match(/\d{4}\/(\d{1,2})\/(\d{1,2})/)
-  if (m) return `${m[1].padStart(2, '0')}/${m[2].padStart(2, '0')}`
-  return undefined
-}
 
 interface SpecRow {
   spec: string
@@ -136,23 +124,21 @@ export default function UnshippedPreview() {
   const { orders, currentFarmerId } = useStore()
   const { today } = useOutletContext<FarmerOutletCtx>()
   const [mode, setMode] = useState<Mode>('normal')
-  // 印單未出：印單日篩選（單日，MM/DD）
-  const [printDay, setPrintDay] = useState('')
-  const [pickerOpen, setPickerOpen] = useState(false)
   const [listOpen, setListOpen] = useState(false) // 出貨總表預覽疊層
 
   const mine = orders.filter((o) => o.farmerId === currentFarmerId)
-  const shippable = groupByProduct(mine.filter((o) => isInShippablePage(o, today)), today)
+  // 需出貨：與「需出貨」頁同套排序（sortForFarmer），出貨總表沿用同一份清單
+  const shippableOrders = sortForFarmer(mine.filter((o) => isInShippablePage(o, today)), today)
+  const shippable = groupByProduct(shippableOrders, today)
   const upcoming = groupByProduct(mine.filter((o) => isInUpcomingPage(o, today)), today)
-  // 印單未出：農友已按印單、但黑貓尚未收走（仍是「已印單」，還沒變「已出貨」）；再依印單日篩
-  const printedOrders = mine.filter((o) => o.shipStatus === '已印單' && (!printDay || printMMDD(o) === printDay))
-  const printed = groupByProduct(printedOrders, today)
-  // 列印日標籤（today 'YYYY-MM-DD' → 'MM/DD'）；有選印單日則以該日為準
-  const printLabel = printDay || `${today.slice(5, 7)}/${today.slice(8, 10)}`
+  // 印單未出：農友已按印單、但黑貓尚未收走（仍是「已印單」，還沒變「已出貨」），依產品彙總
+  const printed = groupByProduct(mine.filter((o) => o.shipStatus === '已印單'), today)
+  // 出貨總表（暫定：僅一般模式提供下載，只含「需出貨」）；列印日標籤用今天
+  const todayLabel = `${today.slice(5, 7)}/${today.slice(8, 10)}`
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      {/* 第一行：一般／印單未出 切換（置中）。第二行（印單未出模式）：印單日篩選 ＋ 列印出貨總表 */}
+      {/* 第一行：一般／印單未出 切換（置中）。第二行（僅一般模式）：下載出貨總表 */}
       <div className="space-y-3">
         <div className="flex justify-center">
           <div className="inline-flex rounded border-2 border-line bg-white p-0.5">
@@ -172,33 +158,12 @@ export default function UnshippedPreview() {
             })}
           </div>
         </div>
-        {mode === 'printed' && (
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {/* 印單日篩選 */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-base text-ink2">印單日篩選</span>
-              <button
-                onClick={() => setPickerOpen(true)}
-                className="flex items-center justify-between gap-2 rounded-lg border border-line bg-white px-3 text-left text-lg font-medium text-ink"
-                style={{ minHeight: 44, minWidth: 112 }}
-              >
-                {printDay || '選擇日期'}
-                <span className="text-ink2">▾</span>
-              </button>
-              {printDay && (
-                <button
-                  onClick={() => setPrintDay('')}
-                  className="text-base font-medium text-brand"
-                  style={{ minHeight: 44, padding: '0 8px' }}
-                >
-                  清除
-                </button>
-              )}
-            </div>
-            {/* 列印出貨總表：圓角／高度對齊左側印單日 picker（rounded-lg / 44px） */}
+        {mode === 'normal' && (
+          <div className="flex justify-center">
+            {/* 一般模式：下載出貨總表（只含「需出貨」），沿用同款鈕與同一個 modal */}
             <button
               onClick={() => setListOpen(true)}
-              disabled={printedOrders.length === 0}
+              disabled={shippableOrders.length === 0}
               className="rounded-lg bg-brand px-5 text-base font-bold text-white transition-colors disabled:opacity-40"
               style={{ minHeight: 44 }}
             >
@@ -224,15 +189,12 @@ export default function UnshippedPreview() {
             <br />
             當黑貓收貨並於黑貓系統切換貨態後，此處的未出單就會自動消失。
           </p>
-          <Block title="印單未出" tone="printed" groups={printed} emptyMsg="目前沒有符合印單日期的印單未出訂單" />
+          <Block title="印單未出" tone="printed" groups={printed} emptyMsg="目前沒有印單未出的訂單" />
         </>
       )}
 
-      {pickerOpen && (
-        <CalendarPicker title="印單日" value={printDay} onSelect={setPrintDay} onClose={() => setPickerOpen(false)} />
-      )}
       {listOpen && (
-        <ShippingListModal orders={printedOrders} printLabel={printLabel} onClose={() => setListOpen(false)} />
+        <ShippingListModal orders={shippableOrders} printLabel={todayLabel} onClose={() => setListOpen(false)} />
       )}
     </div>
   )
