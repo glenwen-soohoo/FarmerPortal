@@ -31,7 +31,7 @@ function windowText(o: Order) {
 }
 
 export default function OrderCard({ order, upcoming, selectable, selected, onToggleSelect, selectedQty = 1, onQtyChange, onQtySet, selectDisabled, earlyEligible, hideProduct, today }: Props) {
-  const { printOrder, supplementOrder, failOrder, dismissCancel, cardStyle } = useStore()
+  const { printOrder, supplementOrder, failOrder, dismissCancel } = useStore()
   const [printing, setPrinting] = useState(false)
   const [printStep, setPrintStep] = useState<'preparing' | 'done'>('preparing')
   const [askPrint, setAskPrint] = useState(false) // 印單彈窗：一次產生 N 個新物流編號
@@ -52,9 +52,8 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   // 時間相關標籤（互斥、一次一個）：逾期 > 指定今日 > 今日到期 > 指定日期 > 快到期
   const timeTag = today ? orderTimeTag(order, today) : null
 
-  // 卡片急迫度呈現，兩版（DevPanel 可切）：
-  //   底色版 fill＝鋪滿淡底色；線框版 outline＝左側寬色塊（貼品名連接處）+ 白底、標籤放大。
-  //   共同：已取消灰。色值取自 theme、不漸層。
+  // 卡片急迫度呈現：訂單與品名連接處加 32px 寬色塊（貼左緣）+ 白底；已取消灰。
+  //   橘＝今日到期/客人指定今日、黃＝快到期/改單重印、紅＝逾期未出（再加淡紅底）。色值取自 theme、不漸層。
   const label = timeTag?.label
   const isOverdue = label === '逾期未出'
   const isHot = label === '今日到期' || label === '客人指定今日出貨' // 橘
@@ -63,38 +62,15 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   const rowStyle: CSSProperties = { opacity: dimmed ? 0.45 : 1 }
   let rowCls = ''
   if (cancelled) rowCls = 'bg-mutedbg'
-  else if (cardStyle === 'fill') {
-    // 底色版：整卡鋪淡底色
-    rowCls = isOverdue
-      ? 'bg-danger/[0.16]'
-      : isHot
-        ? 'bg-cardhot/[0.2]'
-        : isWarn
-          ? 'bg-cardwarn/[0.17]'
-          : selectable && selected
-            ? 'bg-mutedbg'
-            : ''
-  } else if (cardStyle === 'outline') {
-    // 線框版：左側 32px 寬色塊（連接品名處）；逾期再加淡紅底（約底色版的 60%）
-    if (isOverdue) {
-      rowStyle.borderLeft = '32px solid #C0392B'
-      rowCls = 'bg-danger/[0.1]'
-    } else if (isHot) rowStyle.borderLeft = '32px solid #FBAE4A'
-    else if (isWarn) rowStyle.borderLeft = '32px solid #FBE45E'
-    else if (selectable && selected) rowCls = 'bg-mutedbg'
-  } else {
-    // 按鈕版：卡片全白、無色塊；只有逾期保留紅底；急迫度改由「印單鈕」顏色表達
-    if (isOverdue) rowCls = 'bg-danger/[0.16]'
-    else if (selectable && selected) rowCls = 'bg-mutedbg'
-  }
+  else if (isOverdue) {
+    rowStyle.borderLeft = '32px solid #C0392B'
+    rowCls = 'bg-danger/[0.1]'
+  } else if (isHot) rowStyle.borderLeft = '32px solid #FBAE4A'
+  else if (isWarn) rowStyle.borderLeft = '32px solid #FBE45E'
+  else if (selectable && selected) rowCls = 'bg-mutedbg'
 
-  // 印單鈕底色：改單重印一律土黃(amberink)；按鈕版時快到期/指定＝偏紅深橘、逾期＝暗深紅；其餘綠
-  let printBtnBg = 'bg-brand active:bg-brand-dark'
-  if (isReprint) printBtnBg = 'bg-amberink active:opacity-90'
-  else if (cardStyle === 'button') {
-    if (isOverdue) printBtnBg = 'bg-btnover active:opacity-90'
-    else if (isHot || label === '快到期') printBtnBg = 'bg-btnhot active:opacity-90'
-  }
+  // 印單鈕底色：改單重印一律土黃(amberink)、其餘綠
+  const printBtnBg = isReprint ? 'bg-amberink active:opacity-90' : 'bg-brand active:bg-brand-dark'
 
   // 已出貨標記接在「物流編號」後面（已印單標記已移除，狀態改由動作鈕表達）
   const statusNode = shipped ? (
@@ -161,13 +137,13 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             <div className="mb-3 flex flex-wrap gap-2">
               {/* 時間相關標籤：互斥，一次只一個。線框版把標籤放大，拉高視覺占比 */}
               {timeTag && (
-                <Tag tone={timeTag.tone} size={cardStyle === 'fill' ? 'md' : 'lg'}>
+                <Tag tone={timeTag.tone} size="lg">
                   {timeTagEmoji(timeTag.label)}{timeTag.label}
                 </Tag>
               )}
               {/* 更新重印：非時間標籤，可與時間標籤並存 */}
               {isReprint && (
-                <Tag tone="orange" size={cardStyle === 'fill' ? 'md' : 'lg'}>
+                <Tag tone="orange" size="lg">
                   ⚠️已更新，請重印
                 </Tag>
               )}

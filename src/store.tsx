@@ -10,8 +10,6 @@ interface Store {
   products: Product[]
   currentFarmerId: number
   setCurrentFarmerId: (id: number) => void // 開發用：切換目前登入農友
-  cardStyle: 'fill' | 'outline' | 'button' // 開發用：卡片急迫度呈現＝底色版 / 線框版 / 按鈕版（A/B 測試）
-  setCardStyle: (s: 'fill' | 'outline' | 'button') => void
   // 印單：每次都即時要新號（count 張＝count 個新物流編號），覆蓋既有號。
   // devToday（'YYYY-MM-DD'）＝【DEMO 專屬】用開發面板測試日期當印單日，見下方實作註解
   printOrder: (id: string, count?: number, devToday?: string) => void
@@ -36,7 +34,6 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   const [farmers, setFarmers] = useState<Farmer[]>(seedFarmers)
   const [products, setProducts] = useState<Product[]>(seedProducts)
   const [currentFarmerId, setCurrentFarmerId] = useState(6)
-  const [cardStyle, setCardStyle] = useState<'fill' | 'outline' | 'button'>('fill')
 
   const patch = (id: string, fn: (o: Order) => Order) =>
     setOrders((prev) => prev.map((o) => (o.id === id ? fn(o) : o)))
@@ -48,8 +45,6 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       products,
       currentFarmerId,
       setCurrentFarmerId,
-      cardStyle,
-      setCardStyle,
       printOrder: (id, count = 1, devToday) =>
         patch(id, (o) => {
           // 每次印單即時要新號：產生 count 個新的黑貓物流編號，覆蓋原本的
@@ -109,7 +104,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       setEarlyShip: (farmerId, allow) =>
         setFarmers((prev) => prev.map((f) => (f.id === farmerId ? { ...f, earlyShipAllowed: allow } : f))),
     }),
-    [orders, farmers, products, currentFarmerId, cardStyle]
+    [orders, farmers, products, currentFarmerId]
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

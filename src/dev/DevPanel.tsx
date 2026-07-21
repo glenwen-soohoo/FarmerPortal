@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useStore } from '../store'
 
 // 開發用面板：切換「測試日期」以驗證可出貨 / 出貨預告是否正確依日期切換。
 // 非產品 UI，樣式刻意做成明顯的開發工具外觀。
@@ -36,7 +35,6 @@ export default function DevPanel({
   onChangeFarmer,
 }: Props) {
   const [open, setOpen] = useState(false)
-  const { cardStyle, setCardStyle } = useStore()
 
   return (
     <div className="fixed bottom-20 right-4 z-40" style={{ fontFamily: "'Noto Sans TC', sans-serif" }}>
@@ -114,22 +112,6 @@ export default function DevPanel({
             </button>
           </div>
 
-          {/* 卡片急迫度呈現：底色版 / 線框版（給使用者 A/B 測試） */}
-          <div className="mt-3 border-t border-gray-600 pt-3">
-            <div className="mb-1 text-xs text-gray-400">卡片樣式</div>
-            <div className="flex gap-2">
-              {(['fill', 'outline', 'button'] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setCardStyle(s)}
-                  className="flex-1 rounded py-1.5 text-sm font-bold"
-                  style={{ background: cardStyle === s ? '#1F6E43' : '#6b6b5f', color: '#fff' }}
-                >
-                  {s === 'fill' ? '底色版' : s === 'outline' ? '線框版' : '按鈕版'}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       ) : (
         <button
