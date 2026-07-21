@@ -7,7 +7,7 @@ import Tag from './Tag'
 import BtnLabel from './BtnLabel'
 import ConfirmDialog from './ConfirmDialog'
 import FailDialog from './FailDialog'
-import { EARLY_SHIP_WARNING, orderTimeTag, needsReprint, isCancelActive } from '../utils/shipDate'
+import { EARLY_SHIP_WARNING, orderTimeTag, needsReprint, isCancelActive, timeTagEmoji } from '../utils/shipDate'
 
 interface Props {
   order: Order
@@ -64,6 +64,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   let rowCls = ''
   if (cancelled) rowCls = 'bg-mutedbg'
   else if (cardStyle === 'fill') {
+    // 底色版：整卡鋪淡底色
     rowCls = isOverdue
       ? 'bg-danger/[0.16]'
       : isHot
@@ -73,7 +74,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
           : selectable && selected
             ? 'bg-mutedbg'
             : ''
-  } else {
+  } else if (cardStyle === 'outline') {
     // 線框版：左側 32px 寬色塊（連接品名處）；逾期再加淡紅底（約底色版的 60%）
     if (isOverdue) {
       rowStyle.borderLeft = '32px solid #C0392B'
@@ -81,6 +82,18 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
     } else if (isHot) rowStyle.borderLeft = '32px solid #FBAE4A'
     else if (isWarn) rowStyle.borderLeft = '32px solid #FBE45E'
     else if (selectable && selected) rowCls = 'bg-mutedbg'
+  } else {
+    // 按鈕版：卡片全白、無色塊；只有逾期保留紅底；急迫度改由「印單鈕」顏色表達
+    if (isOverdue) rowCls = 'bg-danger/[0.16]'
+    else if (selectable && selected) rowCls = 'bg-mutedbg'
+  }
+
+  // 印單鈕底色：改單重印一律土黃(amberink)；按鈕版時快到期/指定＝偏紅深橘、逾期＝暗深紅；其餘綠
+  let printBtnBg = 'bg-brand active:bg-brand-dark'
+  if (isReprint) printBtnBg = 'bg-amberink active:opacity-90'
+  else if (cardStyle === 'button') {
+    if (isOverdue) printBtnBg = 'bg-btnover active:opacity-90'
+    else if (isHot || label === '快到期') printBtnBg = 'bg-btnhot active:opacity-90'
   }
 
   // 已出貨標記接在「物流編號」後面（已印單標記已移除，狀態改由動作鈕表達）
@@ -148,14 +161,14 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
             <div className="mb-3 flex flex-wrap gap-2">
               {/* 時間相關標籤：互斥，一次只一個。線框版把標籤放大，拉高視覺占比 */}
               {timeTag && (
-                <Tag tone={timeTag.tone} size={cardStyle === 'outline' ? 'lg' : 'md'}>
-                  {timeTag.label}
+                <Tag tone={timeTag.tone} size={cardStyle === 'fill' ? 'md' : 'lg'}>
+                  {timeTagEmoji(timeTag.label)}{timeTag.label}
                 </Tag>
               )}
               {/* 更新重印：非時間標籤，可與時間標籤並存 */}
               {isReprint && (
-                <Tag tone="orange" size={cardStyle === 'outline' ? 'lg' : 'md'}>
-                  已更新，請重印
+                <Tag tone="orange" size={cardStyle === 'fill' ? 'md' : 'lg'}>
+                  ⚠️已更新，請重印
                 </Tag>
               )}
             </div>
@@ -358,9 +371,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               {/* 未印：印單＝唯一主鈕，最大最醒目。改單待重印用土黃色(amberink)區隔（提醒是改過的單） */}
               <button
                 onClick={openPrint}
-                className={`flex-1 rounded font-bold text-white ${
-                  isReprint ? 'bg-amberink active:opacity-90' : 'bg-brand text-3xl active:bg-brand-dark'
-                }`}
+                className={`flex-1 rounded font-bold text-white ${printBtnBg} ${isReprint ? '' : 'text-3xl'}`}
                 style={{ minHeight: 120 }}
               >
                 {isReprint ? (

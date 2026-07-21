@@ -118,14 +118,14 @@ export default function DevPanel({
           <div className="mt-3 border-t border-gray-600 pt-3">
             <div className="mb-1 text-xs text-gray-400">卡片樣式</div>
             <div className="flex gap-2">
-              {(['fill', 'outline'] as const).map((s) => (
+              {(['fill', 'outline', 'button'] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => setCardStyle(s)}
                   className="flex-1 rounded py-1.5 text-sm font-bold"
                   style={{ background: cardStyle === s ? '#1F6E43' : '#6b6b5f', color: '#fff' }}
                 >
-                  {s === 'fill' ? '底色版' : '線框版'}
+                  {s === 'fill' ? '底色版' : s === 'outline' ? '線框版' : '按鈕版'}
                 </button>
               ))}
             </div>

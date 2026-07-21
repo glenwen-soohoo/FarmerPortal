@@ -77,6 +77,17 @@ export function orderTimeTag(order: Order, todayIso: string): { label: string; t
   return null
 }
 
+// 前台狀態標籤的 emoji 前綴（依語意比對，容忍「客人指定…」前綴與備貨總覽去尾字後的字樣）。
+// 只加在顯示文字前，不改 label 值（OrderCard 靠 label 做等值判斷）。
+export function timeTagEmoji(label: string): string {
+  if (label.includes('逾期')) return '‼️'
+  if (label.includes('指定今日')) return '🔴'
+  if (label.includes('今日到期')) return '🔴'
+  if (label.includes('快到期')) return '🟡'
+  if (label.includes('重印')) return '⚠️'
+  return ''
+}
+
 // 農友「出貨預告」頁應顯示：進行中但尚未達出貨起始日的單
 export function isInUpcomingPage(order: Order, todayIso: string): boolean {
   return timeBucket(order, todayIso) === 'upcoming'

@@ -62,8 +62,9 @@ body {
   .anim-fade, .anim-pop, .anim-slide-down, .anim-slide-up { animation: none; }
 }
 
-/* 需出貨 / 出貨預告卡片：商品名欄與印單鈕欄寬度；<960 時縮到 2/3，中間資訊撐滿多出空間 */
-.oc-aside { width: 264px; }
+/* 需出貨 / 出貨預告卡片：商品名欄與印單鈕欄寬度。
+   ≥960 品名欄用 rem（13rem≈208px@預設），字體調小時整欄跟著更窄；<960 再縮到 2/3 */
+.oc-aside { width: 13rem; }
 .oc-action { width: 160px; }
 /* 無法出貨：一律不換行；窄版縮字避免超出 */
 .oc-fail { white-space: nowrap; }

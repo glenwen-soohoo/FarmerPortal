@@ -33,6 +33,9 @@ export default {
         // 卡片急迫度底色（比語意色更鮮明、彩度高，避免髒）：黃＝快到期/改單重印、橘＝指定今日/今日到期
         cardwarn: '#FBE45E', // 黃
         cardhot: '#FBAE4A', // 橘
+        // 按鈕版：印單鈕依急迫度上色（改單重印＝amberink 土黃）
+        btnhot: '#C64A1F', // 偏紅深橘：快到期 / 指定出貨
+        btnover: '#9C2A1F', // 暗深紅：逾期未出
         // 後台 admin
         admin: {
           primary: '#409eff',

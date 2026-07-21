@@ -23,7 +23,7 @@ export default function Tag({
   children: ReactNode
 }) {
   const sizing =
-    size === 'sm' ? 'px-2 py-0.5 text-sm' : size === 'lg' ? 'px-7 py-1.5 text-xl' : 'px-4 py-1 text-lg'
+    size === 'sm' ? 'px-2 py-0.5 text-sm' : size === 'lg' ? 'px-5 py-1.5 text-xl' : 'px-2.5 py-1 text-lg'
   return (
     <span className={`inline-flex items-center rounded-full font-bold ${sizing} ${TONE[tone]} ${className}`}>
       {children}

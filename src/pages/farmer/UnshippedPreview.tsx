@@ -5,6 +5,7 @@ import type { Order } from '../../types'
 import { isInShippablePage, isInUpcomingPage, orderTimeTag, needsReprint } from '../../utils/shipDate'
 import Tag, { type TagTone } from '../../components/Tag'
 import CalendarPicker from '../../components/CalendarPicker'
+import ShippingListModal from '../../components/ShippingListModal'
 import type { FarmerOutletCtx } from './FarmerLayout'
 
 // 清洗後的產品名（優先用 AI 清洗品種名 variety，退回原始 productName）
@@ -43,8 +44,8 @@ function groupByProduct(list: Order[], today: string): ProductGroup[] {
     const s = specs.get(o.spec)!
     s.qty += o.qty
     const tt = orderTimeTag(o, today)
-    // 總覽標籤精簡：去掉尾字「出貨」（指定今日出貨→指定今日、指定 06/13 出貨→指定 06/13）
-    if (tt) s.tags.set(tt.label.replace(/\s*出貨$/, ''), tt.tone)
+    // 總覽標籤精簡：去掉「客人」前綴與尾字「出貨」（客人指定今日出貨→指定今日、客人指定 06/13 出貨→指定 06/13）
+    if (tt) s.tags.set(tt.label.replace(/^客人/, '').replace(/\s*出貨$/, ''), tt.tone)
     if (needsReprint(o)) s.tags.set('重印', 'orange')
   }
   return [...map.entries()]
@@ -138,39 +139,42 @@ export default function UnshippedPreview() {
   // 印單未出：印單日篩選（單日，MM/DD）
   const [printDay, setPrintDay] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [listOpen, setListOpen] = useState(false) // 出貨總表預覽疊層
 
   const mine = orders.filter((o) => o.farmerId === currentFarmerId)
   const shippable = groupByProduct(mine.filter((o) => isInShippablePage(o, today)), today)
   const upcoming = groupByProduct(mine.filter((o) => isInUpcomingPage(o, today)), today)
   // 印單未出：農友已按印單、但黑貓尚未收走（仍是「已印單」，還沒變「已出貨」）；再依印單日篩
-  const printed = groupByProduct(
-    mine.filter((o) => o.shipStatus === '已印單' && (!printDay || printMMDD(o) === printDay)),
-    today
-  )
+  const printedOrders = mine.filter((o) => o.shipStatus === '已印單' && (!printDay || printMMDD(o) === printDay))
+  const printed = groupByProduct(printedOrders, today)
+  // 列印日標籤（today 'YYYY-MM-DD' → 'MM/DD'）；有選印單日則以該日為準
+  const printLabel = printDay || `${today.slice(5, 7)}/${today.slice(8, 10)}`
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      {/* 模式切換恆置中（中間欄 auto、左右對稱 1fr）；印單未出模式時印單日期篩選放切換鈕右側、不影響置中 */}
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-        <div />
-        <div className="inline-flex justify-self-center rounded border-2 border-line bg-white p-0.5">
-          {MODES.map((m) => {
-            const active = mode === m.key
-            return (
-              <button
-                key={m.key}
-                onClick={() => setMode(m.key)}
-                className={`rounded-sm px-6 py-1.5 text-base font-bold transition-colors ${
-                  active ? 'bg-brand text-white' : 'text-ink2'
-                }`}
-              >
-                {m.label}
-              </button>
-            )
-          })}
+      {/* 第一行：一般／印單未出 切換（置中）。第二行（印單未出模式）：印單日篩選 ＋ 列印出貨總表 */}
+      <div className="space-y-3">
+        <div className="flex justify-center">
+          <div className="inline-flex rounded border-2 border-line bg-white p-0.5">
+            {MODES.map((m) => {
+              const active = mode === m.key
+              return (
+                <button
+                  key={m.key}
+                  onClick={() => setMode(m.key)}
+                  className={`rounded-sm px-6 py-1.5 text-base font-bold transition-colors ${
+                    active ? 'bg-brand text-white' : 'text-ink2'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
-        <div className="min-w-0">
-          {mode === 'printed' && (
+        {mode === 'printed' && (
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {/* 印單日篩選 */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-base text-ink2">印單日篩選</span>
               <button
@@ -184,15 +188,24 @@ export default function UnshippedPreview() {
               {printDay && (
                 <button
                   onClick={() => setPrintDay('')}
-                  className="ml-auto text-base font-medium text-brand"
+                  className="text-base font-medium text-brand"
                   style={{ minHeight: 44, padding: '0 8px' }}
                 >
                   清除
                 </button>
               )}
             </div>
-          )}
-        </div>
+            {/* 列印出貨總表：圓角／高度對齊左側印單日 picker（rounded-lg / 44px） */}
+            <button
+              onClick={() => setListOpen(true)}
+              disabled={printedOrders.length === 0}
+              className="rounded-lg bg-brand px-5 text-base font-bold text-white transition-colors disabled:opacity-40"
+              style={{ minHeight: 44 }}
+            >
+              下載出貨總表
+            </button>
+          </div>
+        )}
       </div>
 
       {mode === 'normal' ? (
@@ -217,6 +230,9 @@ export default function UnshippedPreview() {
 
       {pickerOpen && (
         <CalendarPicker title="印單日" value={printDay} onSelect={setPrintDay} onClose={() => setPickerOpen(false)} />
+      )}
+      {listOpen && (
+        <ShippingListModal orders={printedOrders} printLabel={printLabel} onClose={() => setListOpen(false)} />
       )}
     </div>
   )
