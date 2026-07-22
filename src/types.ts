@@ -20,8 +20,8 @@ export type ShipStatus =
 
 export type TempLayer = '常溫' | '冷藏' | '冷凍'
 
-// 企業匯單分類（程式判定、非 AI；711 優先），見 F3 §2-2
-export type BulkOrderType = '一般' | '統一711' | '企業匯單'
+// 訂單類別（程式判定、非 AI；711 優先），見 F3 §2-2。企業送禮＝原「企業匯單」，前台一律顯示「企業送禮」
+export type BulkOrderType = '一般' | '統一711' | '企業送禮'
 
 // 手動改單稽核
 export interface AuditEntry {
@@ -50,7 +50,8 @@ export interface Order {
   driverRemark?: string // AI 產（Mongo）：印在物流單、給司機/物流的配送指示（放哪/電聯/易碎）
   csRemark?: string // SQL Orders.CustomerServiceRemark（客服備註、非 AI、不動）；補單記錄也續記於此
   variety?: string // 清洗後品種名（程式取品名【】內文字、非 AI，見 F3 §2-1）
-  bulkOrderType?: BulkOrderType // 企業匯單分類（程式判定、711 優先）：統一711=品名開頭 711；企業匯單=企業匯入單（下單會員電話 0900000000／RemarkFromAdmin 含「企業訂單匯入」）；一般=消費者單。見 F3 §2-2
+  bulkOrderType?: BulkOrderType // 訂單類別（程式判定、711 優先）：統一711=品名開頭「711」；企業送禮=品名開頭「企業送禮」且客服備註能抓到企業名稱（抓不到退回一般）；一般=消費者單。見 F3 §2-2
+  enterpriseName?: string // 企業送禮專用：從客服備註抓到的企業名稱（同企業＋同水果會整併顯示）
   judgeReason?: string // AI 判定理由（唯讀，對應 AI 回傳的 reason）
   confidence?: number // AI 判定信心 0–1（< 門檻 → 低信心）；judgeStatus 由 confidence + needsHuman 映射（見 F3 §3-3）
   needsHuman?: boolean // AI 標記需人工（true → 判定失敗 / 轉人工）

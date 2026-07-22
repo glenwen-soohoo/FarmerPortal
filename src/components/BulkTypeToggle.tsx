@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import type { Order, BulkOrderType } from '../types'
 
-// 訂單類別切換（一般 / 7-11 / 企業匯單）：對應 bulkOrderType（程式判定、711 優先，見 F3 §2-2）
+// 訂單類別切換（一般 / 7-11 / 企業送禮）：對應 bulkOrderType（程式判定、711 優先，見 F3 §2-2）
 // 放在需出貨 / 出貨預告頁左上角、與右側「篩選」相對；大小比照收合的篩選鈕（高 56、border-2、text-lg）。
 const TABS: { key: BulkOrderType; label: string }[] = [
   { key: '一般', label: '一般' },
   { key: '統一711', label: '7-11' },
-  { key: '企業匯單', label: '企業匯單' },
+  { key: '企業送禮', label: '企業送禮' },
 ]
 
 // 依訂單類別切換 + 過濾。回傳過濾後清單與切換鈕（用法比照 useListFilter）。
@@ -18,7 +18,7 @@ export function useBulkTypeFilter(list: Order[]) {
   const counts: Record<BulkOrderType, number> = {
     一般: list.filter((o) => typeOf(o) === '一般').length,
     統一711: list.filter((o) => typeOf(o) === '統一711').length,
-    企業匯單: list.filter((o) => typeOf(o) === '企業匯單').length,
+    企業送禮: list.filter((o) => typeOf(o) === '企業送禮').length,
   }
   // 預設選第一個有單的類別（避免預設「一般」卻是空的鎖住狀態）
   const firstAvail = TABS.find((t) => counts[t.key] > 0)?.key ?? '一般'

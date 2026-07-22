@@ -25,6 +25,8 @@ interface Store {
   setAccountStatus: (farmerId: number, status: Farmer['status']) => void
   // 提早出貨資格：業務確認後才開放給特定農友
   setEarlyShip: (farmerId: number, allow: boolean) => void
+  // 偏遠客代：標記此農園是否偏遠（開＝帶客代碼、關＝清空）；客代碼實務由農園地址帶入
+  setRemoteAgent: (farmerId: number, on: boolean) => void
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -103,6 +105,10 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         setFarmers((prev) => prev.map((f) => (f.id === farmerId ? { ...f, status } : f))),
       setEarlyShip: (farmerId, allow) =>
         setFarmers((prev) => prev.map((f) => (f.id === farmerId ? { ...f, earlyShipAllowed: allow } : f))),
+      setRemoteAgent: (farmerId, on) =>
+        setFarmers((prev) =>
+          prev.map((f) => (f.id === farmerId ? { ...f, remoteAgentCode: on ? (f.remoteAgentCode || '待設定') : undefined } : f))
+        ),
     }),
     [orders, farmers, products, currentFarmerId]
   )

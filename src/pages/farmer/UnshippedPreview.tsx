@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { useStore } from '../../store'
-import type { Order } from '../../types'
+import type { Order, BulkOrderType } from '../../types'
 import { isInShippablePage, isInUpcomingPage, orderTimeTag, needsReprint, sortForFarmer } from '../../utils/shipDate'
 import Tag, { type TagTone } from '../../components/Tag'
 import ShippingListModal from '../../components/ShippingListModal'
@@ -154,14 +154,37 @@ export default function UnshippedPreview() {
   const [dayPickerOpen, setDayPickerOpen] = useState(false) // 印單日複選彈窗
   // 被取消勾選的印單日（空＝全部顯示）；用「排除集合」對切換農友、資料變動較穩健
   const [excludedDays, setExcludedDays] = useState<Set<string>>(new Set())
+  // 次要切換：訂單類別（全部／一般／7-11／企業送禮）
+  const [bulkFilter, setBulkFilter] = useState<'all' | BulkOrderType>('all')
 
   const mine = orders.filter((o) => o.farmerId === currentFarmerId)
+  // 訂單類別次要篩選：根本沒有「一般以外」的單時，整個次要切換器不顯示
+  const typeOf = (o: Order): BulkOrderType => o.bulkOrderType ?? '一般'
+  const hasSpecialType = mine.some((o) => typeOf(o) !== '一般')
+  const catCount: Record<BulkOrderType, number> = {
+    一般: mine.filter((o) => typeOf(o) === '一般').length,
+    統一711: mine.filter((o) => typeOf(o) === '統一711').length,
+    企業送禮: mine.filter((o) => typeOf(o) === '企業送禮').length,
+  }
+  // 次要切換選項：全部 + 目前有單的類別（沒單的類別不顯示，避免空按鈕）
+  const secondaryTabs = (
+    [
+      { key: 'all', label: '全部' },
+      { key: '一般', label: '一般' },
+      { key: '統一711', label: '7-11' },
+      { key: '企業送禮', label: '企業送禮' },
+    ] as const
+  ).filter((t) => t.key === 'all' || catCount[t.key] > 0)
+  // 選到的類別若已無單（換農友後可能發生）→ 退回全部
+  const effBulk = bulkFilter !== 'all' && catCount[bulkFilter] === 0 ? 'all' : bulkFilter
+  const mineF = effBulk === 'all' ? mine : mine.filter((o) => typeOf(o) === effBulk)
+
   // 需出貨：與「需出貨」頁同套排序（sortForFarmer），出貨總表沿用同一份清單
-  const shippableOrders = sortForFarmer(mine.filter((o) => isInShippablePage(o, today)), today)
+  const shippableOrders = sortForFarmer(mineF.filter((o) => isInShippablePage(o, today)), today)
   const shippable = groupByProduct(shippableOrders, today)
-  const upcoming = groupByProduct(mine.filter((o) => isInUpcomingPage(o, today)), today)
+  const upcoming = groupByProduct(mineF.filter((o) => isInUpcomingPage(o, today)), today)
   // 印單未出：農友已按印單、但黑貓尚未收走（仍是「已印單」，還沒變「已出貨」）
-  const allPrinted = mine.filter((o) => o.shipStatus === '已印單')
+  const allPrinted = mineF.filter((o) => o.shipStatus === '已印單')
   // 印單日選項：有印單未出訂單的印單日（MM/DD），去重排序
   const printDayOptions = [...new Set(allPrinted.map(printMMDD).filter((d): d is string => !!d))].sort()
   // 依印單日篩選（被排除者不顯示；沒有印單日的一律保留）
@@ -201,37 +224,61 @@ export default function UnshippedPreview() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      {/* 切換列：手機時篩選鈕落到第二行（置中）；平板／桌機時篩選鈕在切換鈕右側同一行。
-          ≥sm 用三欄 grid（1fr｜切換鈕｜1fr）維持切換鈕置中、篩選鈕靠左貼在其右側 */}
-      <div className="flex flex-col items-center gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-3">
-        <div className="hidden sm:block" />
-        <div className="inline-flex rounded border-2 border-line bg-white p-0.5 sm:justify-self-center">
-          {MODES.map((m) => {
-            const active = mode === m.key
-            return (
+      <div className="space-y-3">
+        {/* 切換列：手機時篩選鈕落到第二行（置中）；平板／桌機時篩選鈕在切換鈕右側同一行。
+            ≥sm 用三欄 grid（1fr｜切換鈕｜1fr）維持切換鈕置中、篩選鈕靠左貼在其右側 */}
+        <div className="flex flex-col items-center gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-3">
+          <div className="hidden sm:block" />
+          <div className="inline-flex rounded border-2 border-line bg-white p-0.5 sm:justify-self-center">
+            {MODES.map((m) => {
+              const active = mode === m.key
+              return (
+                <button
+                  key={m.key}
+                  onClick={() => setMode(m.key)}
+                  className={`rounded-sm px-5 py-1.5 text-base font-bold transition-colors ${
+                    active ? 'bg-brand text-white' : 'text-ink2'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              )
+            })}
+          </div>
+          {mode === 'printed' && printDayOptions.length > 0 && (
+            <div className="min-w-0 sm:justify-self-start">
               <button
-                key={m.key}
-                onClick={() => setMode(m.key)}
-                className={`rounded-sm px-5 py-1.5 text-base font-bold transition-colors ${
-                  active ? 'bg-brand text-white' : 'text-ink2'
+                onClick={() => setDayPickerOpen(true)}
+                className={`rounded border-2 px-4 py-1.5 text-base font-bold transition-colors ${
+                  filtered ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink2'
                 }`}
+                style={{ minHeight: 44 }}
               >
-                {m.label}
+                印單日篩選{filtered ? `（勾選 ${shownDayCount} 日）` : ''}
               </button>
-            )
-          })}
+            </div>
+          )}
         </div>
-        {mode === 'printed' && printDayOptions.length > 0 && (
-          <div className="min-w-0 sm:justify-self-start">
-            <button
-              onClick={() => setDayPickerOpen(true)}
-              className={`rounded border-2 px-4 py-1.5 text-base font-bold transition-colors ${
-                filtered ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink2'
-              }`}
-              style={{ minHeight: 44 }}
-            >
-              印單日篩選{filtered ? `（勾選 ${shownDayCount} 日）` : ''}
-            </button>
+
+        {/* 次要切換：訂單類別（全部／一般／7-11／企業送禮）；沒有一般以外的單就不顯示 */}
+        {hasSpecialType && (
+          <div className="flex justify-center">
+            <div className="inline-flex flex-wrap justify-center gap-1">
+              {secondaryTabs.map((t) => {
+                const active = effBulk === t.key
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => setBulkFilter(t.key)}
+                    className={`rounded border px-4 py-1 text-base font-bold transition-colors ${
+                      active ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink2'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>

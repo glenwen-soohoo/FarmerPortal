@@ -1,6 +1,7 @@
 import { useOutletContext } from 'react-router-dom'
 import { useStore } from '../../store'
 import ProductGroupList from '../../components/ProductGroupList'
+import EnterpriseGroupList from '../../components/EnterpriseGroupList'
 import { EmptyState } from '../../components/States'
 import { useListFilter } from '../../components/ListFilter'
 import { useBulkTypeFilter } from '../../components/BulkTypeToggle'
@@ -16,7 +17,7 @@ export default function Shippable() {
     orders.filter((o) => o.farmerId === currentFarmerId && isInShippablePage(o, today) && !isCancelHidden(o, today)),
     today
   )
-  const { filtered: byType, toggle } = useBulkTypeFilter(list)
+  const { bulkType, filtered: byType, toggle } = useBulkTypeFilter(list)
   const { filtered, filterButton, filterPanel } = useListFilter(byType, { keyword: true })
 
   if (list.length === 0) {
@@ -36,6 +37,8 @@ export default function Shippable() {
       />
       {filtered.length === 0 ? (
         <EmptyState message="沒有符合篩選的單" />
+      ) : bulkType === '企業送禮' ? (
+        <EnterpriseGroupList orders={filtered} mode="print" today={today} />
       ) : (
         <ProductGroupList orders={filtered} mode="print" setNavLocked={setNavLocked} today={today} />
       )}

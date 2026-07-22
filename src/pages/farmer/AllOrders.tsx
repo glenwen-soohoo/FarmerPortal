@@ -47,7 +47,7 @@ export default function AllOrders() {
                 <StatusBadge status={o.shipStatus} />
               </div>
               <div className="mt-1 text-lg font-bold text-ink">
-                {o.productName}
+                {(o.variety && o.variety.trim()) || o.productName}
                 <span className="ml-6 text-base font-bold text-ink2">{o.spec}　×{o.qty}</span>
               </div>
               <div className="mt-1 text-base text-ink2">預計出貨 {windowText(o.shipWindow)}</div>

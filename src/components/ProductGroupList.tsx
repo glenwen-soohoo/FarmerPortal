@@ -9,23 +9,29 @@ import { EARLY_SHIP_WARNING, isCancelActive } from '../utils/shipDate'
 
 // 商品分區依「清洗後名稱」（variety→productName）
 const productKey = (o: Order) => (o.variety && o.variety.trim()) || o.productName
+// 企業送禮：同企業＋同水果整併成一組（企業希望一次收到所有貨）；其餘照品名分組。
+const groupKeyOf = (o: Order) => (o.enterpriseName ? `${o.enterpriseName}${productKey(o)}` : productKey(o))
 
 const FAIL_REASONS = ['缺貨', '品質不良', '數量不足', '其他']
 
 interface Group {
+  key: string // 分組識別（企業送禮＝企業+品名；其餘＝品名）；批次鎖定用
   product: string
+  enterprise?: string // 企業送禮才有：顯示在品名上方
   orders: Order[]
   totalQty: number
 }
 function toGroups(orders: Order[]): Group[] {
   const m = new Map<string, Order[]>()
   for (const o of orders) {
-    const k = productKey(o)
+    const k = groupKeyOf(o)
     if (!m.has(k)) m.set(k, [])
     m.get(k)!.push(o)
   }
-  return [...m.entries()].map(([product, os]) => ({
-    product,
+  return [...m.entries()].map(([key, os]) => ({
+    key,
+    product: productKey(os[0]),
+    enterprise: os[0].enterpriseName,
     orders: os,
     totalQty: os.reduce((a, b) => a + b.qty, 0),
   }))
@@ -43,8 +49,8 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
   const { printOrder, supplementOrder, failOrder } = useStore()
   const groups = toGroups(orders)
 
-  // 批次只能針對「同一商品」→ 用 batchProduct 鎖定目前批次的商品
-  const [batchProduct, setBatchProduct] = useState<string | null>(null)
+  // 批次只能針對「同一組」→ 用 batchKey 鎖定目前批次的分組（企業送禮＝企業+品名）
+  const [batchKey, setBatchKey] = useState<string | null>(null)
   // 勾選內容：id → 份數（1=原印，>1=含補印）
   const [sel, setSel] = useState<Map<string, number>>(new Map())
   const [confirming, setConfirming] = useState(false)
@@ -52,25 +58,25 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
   const [printing, setPrinting] = useState(false)
 
   useEffect(() => {
-    setNavLocked(batchProduct !== null)
+    setNavLocked(batchKey !== null)
     return () => setNavLocked(false)
-  }, [batchProduct, setNavLocked])
+  }, [batchKey, setNavLocked])
 
   const showBatch = mode === 'print' || !!earlyEligible
   const labelCount = [...sel.values()].reduce((a, b) => a + b, 0) // 總張數（含補印）
 
   // 已取消的單不可列印、不進批次
   const printable = (o: Order) => !(today && isCancelActive(o, today))
-  const enter = (p: string) => {
-    setBatchProduct(p)
+  const enter = (k: string) => {
+    setBatchKey(k)
     // 進批次預設全部打勾（含已有物流編號者、排除已取消），份數帶各單預設值
-    const grp = groups.find((g) => g.product === p)
+    const grp = groups.find((g) => g.key === k)
     const n = new Map<string, number>()
     grp?.orders.filter(printable).forEach((o) => n.set(o.id, defaultQty(o.id)))
     setSel(n)
   }
   const cancel = () => {
-    setBatchProduct(null)
+    setBatchKey(null)
     setSel(new Map())
     setConfirming(false)
     setFailing(false)
@@ -135,8 +141,8 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
     <>
       <div className="space-y-6">
         {groups.map((g) => {
-          const active = batchProduct === g.product
-          const otherActive = batchProduct !== null && !active
+          const active = batchKey === g.key
+          const otherActive = batchKey !== null && !active
           const printables = g.orders.filter(printable)
           const allSelected = active && printables.length > 0 && printables.every((o) => sel.has(o.id))
           const toggleAll = () =>
@@ -157,7 +163,7 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
 
           return (
             <section
-              key={g.product}
+              key={g.key}
               className={`pg-section flex rounded-card border bg-white ${active ? 'border-brand' : 'border-line'}`}
               style={{
                 borderWidth: active ? 2 : 1,
@@ -170,6 +176,11 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
               <aside className="oc-aside shrink-0 rounded-l-card border-r border-line bg-white">
                 <div className="pg-aside-inner sticky top-0 p-4">
                   <div className="pg-aside-info">
+                    {g.enterprise && (
+                      <div className="mb-1 inline-flex items-center rounded border border-accent bg-orangebg px-2 py-0.5 text-sm font-bold text-amberink">
+                        企業送禮 · {g.enterprise}
+                      </div>
+                    )}
                     <div className="text-3xl font-bold leading-tight text-ink">{g.product}</div>
                     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
                       {temps.map((t) => (
@@ -209,7 +220,7 @@ export default function ProductGroupList({ orders, mode, earlyEligible, setNavLo
                         </button>
                       </>
                     ) : showBatch ? (
-                      <BigButton size="md" variant="secondary" onClick={() => enter(g.product)} disabled={otherActive}>
+                      <BigButton size="md" variant="secondary" onClick={() => enter(g.key)} disabled={otherActive}>
                         {batchLabel}
                       </BigButton>
                     ) : null}

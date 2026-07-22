@@ -10,7 +10,7 @@ const STATUS_TAG: Record<Farmer['status'], string> = {
 }
 
 export default function Accounts() {
-  const { farmers, setAccountStatus, setEarlyShip } = useStore()
+  const { farmers, setAccountStatus, setEarlyShip, setRemoteAgent } = useStore()
   const [detail, setDetail] = useState<Farmer | null>(null)
   const [confirmDisable, setConfirmDisable] = useState<Farmer | null>(null)
   const [confirmEarly, setConfirmEarly] = useState<Farmer | null>(null)
@@ -46,6 +46,13 @@ export default function Accounts() {
     } else {
       setConfirmEarly(f)
     }
+  }
+
+  // 偏遠客代：事實屬性（依農園地址），直接開關、不需二次確認
+  const toggleRemote = (f: Farmer) => {
+    const on = !f.remoteAgentCode
+    setRemoteAgent(f.id, on)
+    flash(on ? `已標記「${f.farm}」為偏遠客代` : `已取消「${f.farm}」偏遠客代`)
   }
 
   const Actions = ({ f }: { f: Farmer }) => (
@@ -100,6 +107,7 @@ export default function Accounts() {
                 <th>產地</th>
                 <th>狀態</th>
                 <th className="cell-center">提早出貨</th>
+                <th className="cell-center">偏遠客代</th>
                 <th>最後登入</th>
                 <th className="cell-ops">操作</th>
               </tr>
@@ -118,6 +126,15 @@ export default function Accounts() {
                       aria-label="提早出貨資格"
                       title={f.earlyShipAllowed ? '已開放（點擊關閉）' : '未開放（點擊開放）'}
                       onClick={() => toggleEarly(f)}
+                    />
+                  </td>
+                  <td className="cell-center">
+                    <button
+                      className={`gox-switch ${f.remoteAgentCode ? 'is-on' : ''}`}
+                      style={{ transform: 'scale(0.8)' }}
+                      aria-label="偏遠客代"
+                      title={f.remoteAgentCode ? `偏遠客代：${f.remoteAgentCode}（點擊取消）` : '非偏遠（點擊標記）'}
+                      onClick={() => toggleRemote(f)}
                     />
                   </td>
                   <td>{f.lastLogin ?? '從未登入'}</td>
@@ -145,6 +162,7 @@ export default function Accounts() {
                 <tr><th>銀行帳戶</th><td>{detail.bank ?? '—'}</td></tr>
                 <tr><th>LINE ID</th><td>{detail.lineId ?? '—'}</td></tr>
                 <tr><th>提早出貨資格</th><td>{farmers.find((f) => f.id === detail.id)?.earlyShipAllowed ? '已開放' : '未開放'}</td></tr>
+                <tr><th>偏遠客代</th><td>{farmers.find((f) => f.id === detail.id)?.remoteAgentCode ?? '否'}</td></tr>
                 <tr><th>最後登入</th><td>{detail.lastLogin ?? '從未登入'}</td></tr>
               </tbody>
             </table>

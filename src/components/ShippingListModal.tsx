@@ -96,7 +96,7 @@ const SL_CSS = `
   background: rgba(43,43,38,.55); font-family: 'Noto Sans TC', system-ui, sans-serif; color: #2B2B26; }
 .sl-dialog { margin: auto; width: 100%; height: 100%; max-width: 1200px; display: flex; flex-direction: column;
   overflow: hidden; background: #fff; border-radius: 8px; box-shadow: 0 12px 40px rgba(0,0,0,.28); }
-.sl-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+.sl-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px 20px; background: #fff; border-bottom: 1px solid #E5E1D8; }
 .sl-bar-title { font-size: 18px; font-weight: 700; }
 .sl-bar-sub { display: block; margin-top: 2px; font-size: 13px; font-weight: 400; color: #6B6B62; }
@@ -106,12 +106,13 @@ const SL_CSS = `
 .sl-btn-ghost { color: #2B2B26; background: #fff; border: 2px solid #E5E1D8; }
 .sl-scroll { flex: 1; overflow: auto; padding: 20px 16px; background: #fff; }
 .sl-print { max-width: 960px; margin: 0 auto; }
-.sl-sheet { background: #fff; padding: 16px 20px; margin: 0 auto 20px; border: 1px solid #E5E1D8; }
+.sl-sheet { background: #fff; padding: 16px 20px; margin: 0 auto 20px; border: 1px solid #E5E1D8; overflow-x: auto; }
 .sl-sheet:last-child { margin-bottom: 0; }
-.sl-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.sl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .sl-head h2 { margin: 0; font-size: 20px; }
-.sl-count { font-size: 13px; color: #6B6B62; }
-.sl-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sl-count { font-size: 13px; color: #6B6B62; white-space: nowrap; }
+/* 窄視窗不擠壓欄位：表格保底寬度，超出時 .sl-sheet 水平捲動 */
+.sl-table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 13px; }
 .sl-table th, .sl-table td { border: 1px solid #C9C4B8; padding: 6px 8px; text-align: left; vertical-align: top; }
 .sl-table th { background: #F0EDE6; font-weight: 700; white-space: nowrap; }
 .sl-table td.c, .sl-table th.c { text-align: center; }
@@ -128,7 +129,8 @@ const SL_CSS = `
   .sl-noprint { display: none !important; }
   .sl-scroll { overflow: visible; padding: 0; }
   .sl-print { max-width: none; margin: 0; }
-  .sl-sheet { border: 0; padding: 0; margin: 0; break-after: page; page-break-after: always; }
+  .sl-sheet { border: 0; padding: 0; margin: 0; overflow-x: visible; break-after: page; page-break-after: always; }
+  .sl-table { min-width: 0; }
   .sl-sheet:last-child { break-after: auto; page-break-after: auto; }
 }
 `
