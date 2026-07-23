@@ -14,7 +14,7 @@ export interface Template {
   data: MasterInput
 }
 
-export const TEMPLATE_GROUPS = ['基本情境', '口語特殊情境', '多品項壓測', '極端 noise'] as const
+export const TEMPLATE_GROUPS = ['基本情境', '口語特殊情境', '多品項壓測', '企業送禮（匯單）', '極端 noise'] as const
 
 // 產一張單品項母單的小工具（口語/ noise 情境多為單子單）
 let _seq = 90000
@@ -38,6 +38,30 @@ function one(rawRemark: string, opts?: Partial<MasterInput> & { product?: string
         defaultShipWindow: opts?.window ?? ['06/08', '06/21'],
       },
     ],
+  }
+}
+
+// 企業匯單「同備註去重整合」批次：一張母單、rawRemark 共用、n 個子單（＝共用同備註的 n 個收件人／箱）
+// 對應 F11 §2-1：送 AI 前把相同備註整合成一張判定母單，一次匯單 → 約 N 張判定單（N＝unique 備註數）。
+function entBatch(rawRemark: string, n: number): MasterInput {
+  const base = _seq
+  _seq += n
+  return {
+    masterOrderId: base,
+    masterOrderNo: String(260100000000 + base),
+    orderDate: '2026-01-20',
+    rawRemark,
+    carrierLeadDays: 1,
+    items: Array.from({ length: n }, (_, i) => ({
+      orderId: base + i + 1,
+      subOrderNo: String(260100000000 + base + i + 1),
+      farm: '冠軍文旦園',
+      productName: '企業送禮【麻豆文旦】冠軍文旦園',
+      spec: '禮盒(6粒裝)',
+      qty: 1,
+      tempLayer: '常溫',
+      defaultShipWindow: ['01/26', '02/08'] as [string, string],
+    })),
   }
 }
 
@@ -254,6 +278,43 @@ export const TEMPLATES: Template[] = [
         { orderId: 89105, subOrderNo: '260615902050', farm: '冠軍文旦園', productName: '中秋嚴選【麻豆文旦】冠軍文旦園', spec: '1箱(9台斤)', qty: 1, tempLayer: '常溫', defaultShipWindow: ['09/01', '09/14'] },
       ],
     },
+  },
+
+  // ── 企業送禮（匯單）：測名片逐字保留（真實匯單樣式，見 F11 §2-2） ──
+  {
+    key: 'ent-multi-card',
+    group: '企業送禮（匯單）',
+    label: '企業送禮·多張名片（勤業眾信）',
+    hint: '「請1/27-29平日出貨，貼【陳建宏】【林育葶】名片」→ 名片 2 人須逐字保留、不可精簡漏人；日期進 blockedDates/forced',
+    data: one('請1/27-29平日出貨，貼【陳建宏】【林育葶】名片', { product: '企業送禮【麻豆文旦】冠軍文旦園', spec: '禮盒(6粒裝)', orderDate: '2026-01-20', window: ['01/26', '02/08'] }),
+  },
+  {
+    key: 'ent-card-pack',
+    group: '企業送禮（匯單）',
+    label: '企業送禮·單張名片＋包裝（大江國際）',
+    hint: '「請1/26出貨，貼【江國裕】名片，請勿放檢貨單」→ 名片＋「請勿放檢貨單」都進 farmerRemark、逐字保留',
+    data: one('請1/26出貨，貼【江國裕】名片，請勿放檢貨單', { product: '企業送禮【麻豆文旦】冠軍文旦園', spec: '禮盒(6粒裝)', orderDate: '2026-01-20', window: ['01/26', '02/08'] }),
+  },
+  {
+    key: 'ent-weekday',
+    group: '企業送禮（匯單）',
+    label: '企業送禮·只有星期（笛飛兒）',
+    hint: '「請一到四出貨」→ 無名片、只有星期偏好，換算 blockedDates（對照組）',
+    data: one('請一到四出貨', { product: '企業送禮【麻豆文旦】冠軍文旦園', spec: '禮盒(6粒裝)', orderDate: '2026-01-20', window: ['01/26', '02/08'] }),
+  },
+  {
+    key: 'ent-batch-10',
+    group: '企業送禮（匯單）',
+    label: '企業送禮·10 筆同備註（批次）',
+    hint: '同備註 10 收件人整合成一張判定母單（F11 §2-1 去重）；測 AI 對 10 子單一致套名片＋包裝規則、不漏不精簡',
+    data: entBatch('請1/26出貨，貼【江國裕】名片，請勿放檢貨單', 10),
+  },
+  {
+    key: 'ent-batch-30',
+    group: '企業送禮（匯單）',
+    label: '企業送禮·30 筆同備註（批次）',
+    hint: '同備註 30 收件人整合成一張；測大批次名片逐筆不漏、不精簡、不合併',
+    data: entBatch('請1/27-29平日出貨，貼【陳建宏】【林育葶】名片', 30),
   },
 
   // ── 極端 noise（判不出來就別硬猜） ────────────────────

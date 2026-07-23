@@ -3,8 +3,12 @@ import { Link } from 'react-router-dom'
 import type { CallResult, MasterInput, MasterItem, Provider } from '../ai/types'
 import { callAI } from '../ai/providers'
 import { PROVIDER_LABEL } from '../ai/providers'
-import { DEFAULT_SYSTEM_PROMPT, buildUserContent } from '../ai/prompt'
-import { TEMPLATES, TEMPLATE_GROUPS, blankItem, blankMaster } from '../ai/templates'
+import { PROMPT_PRESETS, PROMPT_MODE_LABEL, buildUserContent, type PromptMode } from '../ai/prompt'
+import { TEMPLATES, TEMPLATE_GROUPS, blankItem, blankMaster, type Template } from '../ai/templates'
+
+const PROMPT_MODES: PromptMode[] = ['general', 'enterprise']
+// 企業送禮（匯單）範本 → 走企業匯單 prompt（F11 §4）；其餘 → 一般 prompt（F3 §3-4）
+const modeOfGroup = (group: string): PromptMode => (group === '企業送禮（匯單）' ? 'enterprise' : 'general')
 import { useAiConfig } from '../ai/config'
 import { fetchHolidays, holidayPromptBlock, type HolidayData } from '../ai/holidays'
 
@@ -61,7 +65,8 @@ function Collapse({ title, children, defaultOpen = false }: { title: string; chi
 export default function AiLab() {
   const [cfg, setCfg] = useAiConfig()
   const [master, setMaster] = useState<MasterInput>(TEMPLATES[0].data)
-  const [system, setSystem] = useState(DEFAULT_SYSTEM_PROMPT)
+  const [promptMode, setPromptMode] = useState<PromptMode>('general')
+  const [system, setSystem] = useState(PROMPT_PRESETS.general)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<CallResult | null>(null)
   const [holidays, setHolidays] = useState<HolidayData | null>(null)
@@ -74,6 +79,18 @@ export default function AiLab() {
   const year = Number(master.orderDate.slice(0, 4)) || 2026
   // 這次判定實際要不要附上假日表
   const activeHolidayBlock = holidays && useHolidays ? holidayPromptBlock(holidays) : undefined
+
+  // 切判定路徑：載入該路徑的預設 prompt（會覆蓋當前 system 文字）
+  const switchMode = (mode: PromptMode) => {
+    setPromptMode(mode)
+    setSystem(PROMPT_PRESETS[mode])
+  }
+  // 選範本：帶入母單，並依範本群組自動切換判定路徑（切換時才覆蓋 prompt，同路徑保留手改）
+  const pickTemplate = (t: Template) => {
+    setMaster(t.data)
+    const mode = modeOfGroup(t.group)
+    if (mode !== promptMode) switchMode(mode)
+  }
 
   const patchMaster = (p: Partial<MasterInput>) => setMaster((m) => ({ ...m, ...p }))
   const patchItem = (i: number, p: Partial<MasterItem>) =>
@@ -154,7 +171,7 @@ export default function AiLab() {
                 <Collapse key={g} title={`${g}（${items.length}）`} defaultOpen={gi === 0}>
                   <div className="flex flex-wrap gap-2">
                     {items.map((t) => (
-                      <button key={t.key} onClick={() => setMaster(t.data)} title={t.hint} className="rounded-lg border border-line bg-white px-3 py-1.5 text-sm text-ink hover:border-brand">
+                      <button key={t.key} onClick={() => pickTemplate(t)} title={t.hint} className="rounded-lg border border-line bg-white px-3 py-1.5 text-sm text-ink hover:border-brand">
                         {t.label}
                       </button>
                     ))}
@@ -258,9 +275,20 @@ export default function AiLab() {
         </Section>
 
         {/* System Prompt */}
-        <Section title="③ System Prompt" desc="預填自 F3 §3-4，可即時修改試 AI 反應。" right={
-          <button onClick={() => setSystem(DEFAULT_SYSTEM_PROMPT)} className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink2">還原預設</button>
+        <Section title="③ System Prompt" desc="兩條判定路徑（F3 §3）：一般前台單 vs 企業匯單，各一組 prompt。選企業送禮範本會自動切到企業匯單路徑。可即時修改試 AI 反應。" right={
+          <button onClick={() => switchMode(promptMode)} className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink2">還原預設</button>
         }>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {PROMPT_MODES.map((m) => (
+              <button
+                key={m}
+                onClick={() => switchMode(m)}
+                className={`rounded-lg border px-4 py-2 text-sm font-bold ${promptMode === m ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink2'}`}
+              >
+                {PROMPT_MODE_LABEL[m]}
+              </button>
+            ))}
+          </div>
           <textarea className={`${inputCls} min-h-[220px] w-full font-mono text-xs leading-relaxed`} value={system} onChange={(e) => setSystem(e.target.value)} />
         </Section>
 

@@ -55,30 +55,55 @@ interface RawCall {
   body: unknown
 }
 
+// 把 provider 的 HTTP 錯誤攤平成可讀訊息（含 status / details，Gemini 的 fieldViolations 會指出哪個欄位錯），
+// 並夾帶「實際送出的 body」到 error 上，失敗時也能在結果頁核對送了什麼。
+function apiError(
+  data: { error?: { message?: string; status?: string; details?: unknown } },
+  status: number,
+  body: unknown
+): Error & { requestBody?: string } {
+  const g = data?.error
+  const msg =
+    (g?.message || `HTTP ${status}`) +
+    (g?.status ? ` [${g.status}]` : '') +
+    (g?.details ? '\ndetails: ' + JSON.stringify(g.details) : '')
+  const err = new Error(msg) as Error & { requestBody?: string }
+  err.requestBody = JSON.stringify(body, null, 2)
+  return err
+}
+
 async function callGemini(cfg: AiConfig, system: string, user: string): Promise<RawCall> {
   const model = cfg.models.gemini
-  const body = {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
+  // maxOutputTokens 拉高：防 JSON 被截斷。thinkingConfig 另外處理（見下）。
+  const baseGen: Record<string, unknown> = {
+    temperature: cfg.temperature,
+    responseMimeType: 'application/json',
+    maxOutputTokens: 8192,
+  }
+  const buildBody = (gen: Record<string, unknown>) => ({
     system_instruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: [{ text: user }] }],
-    generationConfig: {
-      temperature: cfg.temperature,
-      responseMimeType: 'application/json',
-      // 2.5/3 flash 預設會「思考」、思考 token 會吃掉輸出額度導致 JSON 被截斷。
-      // 這種結構化抽取不需要思考 → 關掉；並拉高輸出上限確保 JSON 印得完。
-      maxOutputTokens: 8192,
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  }
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    {
+    generationConfig: gen,
+  })
+  const post = async (gen: Record<string, unknown>) => {
+    const body = buildBody(gen)
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': cfg.apiKeys.gemini },
       body: JSON.stringify(body),
-    }
-  )
-  const data = await res.json()
-  if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`)
+    })
+    return { res, data: await res.json(), body }
+  }
+
+  // 支援思考的 flash（2.5/3）預設會「思考」、思考 token 會吃掉輸出額度導致 JSON 被截斷 → 帶 thinkingConfig 關掉。
+  // 但不支援思考的 flash 版本會因這個欄位整包回 400 INVALID_ARGUMENT → 自動退回不帶 thinkingConfig 再打一次。
+  let { res, data, body } = await post({ ...baseGen, thinkingConfig: { thinkingBudget: 0 } })
+  if (res.status === 400) {
+    ;({ res, data, body } = await post(baseGen))
+  }
+  if (!res.ok) throw apiError(data, res.status, body)
+
   const text: string =
     data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? ''
   const u = data?.usageMetadata
@@ -103,7 +128,7 @@ async function callOpenAI(cfg: AiConfig, system: string, user: string): Promise<
     body: JSON.stringify(body),
   })
   const data = await res.json()
-  if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`)
+  if (!res.ok) throw apiError(data, res.status, body)
   const text: string = data?.choices?.[0]?.message?.content ?? ''
   const u = data?.usage
   const usage = u ? `prompt ${u.prompt_tokens} / output ${u.completion_tokens} tokens` : undefined
@@ -131,7 +156,7 @@ async function callAnthropic(cfg: AiConfig, system: string, user: string): Promi
     body: JSON.stringify(body),
   })
   const data = await res.json()
-  if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`)
+  if (!res.ok) throw apiError(data, res.status, body)
   const text: string =
     data?.content?.map((c: { text?: string }) => c.text ?? '').join('') ?? ''
   const u = data?.usage
@@ -166,14 +191,15 @@ export async function callAI(cfg: AiConfig, system: string, user: string): Promi
     }
   } catch (e) {
     const ms = Math.round(performance.now() - t0)
+    const err = e as Error & { requestBody?: string }
     return {
       ok: false,
       provider,
       model,
       ms,
       rawText: '',
-      error: (e as Error).message,
-      requestBody: '',
+      error: err.message,
+      requestBody: err.requestBody ?? '',
     }
   }
 }
