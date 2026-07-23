@@ -19,23 +19,27 @@ interface Query {
   to: string
   ship: string[]
   judge: string[]
-  bulk: BulkOrderType | 'all' // 企業匯單分類
+  bulk: string[] // 企業匯單分類（複選，空＝全部）
 }
-const EMPTY: Query = { kw: '', from: '', to: '', ship: [], judge: [], bulk: 'all' }
+const EMPTY: Query = { kw: '', from: '', to: '', ship: [], judge: [], bulk: [] }
 // 進頁預設：出貨狀態只看「進行中 / 需處理」，隱藏 未付款 / 已出貨 / 已到貨 / 訂單失敗
 const DEFAULT_QUERY: Query = {
-  kw: '', from: '', to: '', judge: [], bulk: 'all',
+  kw: '', from: '', to: '', judge: [], bulk: [],
   ship: ['未達出貨時間', '可出貨', '已印單', '改單待重印', '逾期未出', '無法出貨'],
 }
-// 企業匯單分類篩選：一般 / 7-11（bulkOrderType='統一711'）/ 企業送禮
-const BULK_FILTER: { key: BulkOrderType | 'all'; label: string }[] = [
-  { key: 'all', label: '全部' },
-  { key: '一般', label: '一般' },
-  { key: '統一711', label: '7-11' },
-  { key: '企業送禮', label: '企業送禮' },
-]
+// 企業匯單分類（複選）：一般 / 統一711（顯示 7-11）/ 企業送禮
+const BULK_OPTIONS: BulkOrderType[] = ['一般', '統一711', '企業送禮']
+const BULK_LABELS: Record<string, string> = { 統一711: '7-11' }
 // YYYY-MM-DD → MM/DD（批次改單寫回 shipWindow / blockedDates 用；mock 統一 2026 年）
 const fromISO = (iso: string) => { const [, m, d] = iso.split('-'); return m && d ? `${m}/${d}` : '' }
+// 不可出貨日：比照訂單詳情，支援多筆（單日 / 區間）。BItem.a/b = ISO
+type BItem = { kind: 'single' | 'range'; a: string; b: string }
+const serializeBlocked = (items: BItem[]): string[] =>
+  items.reduce<string[]>((acc, it) => {
+    if (it.kind === 'single' && it.a) acc.push(fromISO(it.a))
+    else if (it.kind === 'range' && it.a && it.b) acc.push(`${fromISO(it.a)}–${fromISO(it.b)}`)
+    return acc
+  }, [])
 
 // order 的 MM/DD → 可比較的 YYYY-MM-DD（mock 統一 2026 年）
 const norm = (mmdd?: string) => {
@@ -57,10 +61,12 @@ function MultiChips({
   options,
   selected,
   onChange,
+  labels,
 }: {
   options: string[]
   selected: string[]
   onChange: (next: string[]) => void
+  labels?: Record<string, string> // 顯示別名（值不變，只改按鈕文字，如 統一711→7-11）
 }) {
   const allActive = selected.length === 0 || selected.length === options.length
   const clickAll = () => onChange([]) // 全部＝清掉右邊個別選項（回到「顯示全部」）
@@ -90,7 +96,7 @@ function MultiChips({
                 : { padding: '4px 12px', fontSize: 13, background: '#fff', borderColor: '#ccc', color: 'var(--gox-text)' }
             }
           >
-            {o}
+            {labels?.[o] ?? o}
           </button>
         )
       })}
@@ -112,8 +118,8 @@ export default function Dashboard() {
   const [bNote, setBNote] = useState('')
   const [bFrom, setBFrom] = useState('')
   const [bTo, setBTo] = useState('')
-  const [bBlockFrom, setBBlockFrom] = useState('')
-  const [bBlockTo, setBBlockTo] = useState('')
+  const [bBlocked, setBBlocked] = useState<BItem[]>([]) // 不可出貨日（可多筆）
+  const [bForced, setBForced] = useState('') // 指定出貨日（ISO）
   const [msg, setMsg] = useState('')
   const flash = (m: string) => { setMsg(m); window.setTimeout(() => setMsg(''), 2500) }
 
@@ -122,10 +128,10 @@ export default function Dashboard() {
     return orders.filter((o) => {
       if (applied.ship.length && !applied.ship.includes(o.shipStatus)) return false
       if (applied.judge.length && !applied.judge.includes(o.judgeStatus)) return false
-      if (applied.bulk !== 'all' && (o.bulkOrderType ?? '一般') !== applied.bulk) return false
+      if (applied.bulk.length && !applied.bulk.includes(o.bulkOrderType ?? '一般')) return false
       if (!inRange(norm(o.shipWindow?.[0]), applied.from, applied.to)) return false
       if (k) {
-        const hay = `${o.orderNumber} ${farmerName(o.farmerId)} ${o.recipient} ${o.phone} ${o.productName} ${o.variety ?? ''} ${o.rawRemark} ${o.farmerRemark}`
+        const hay = `${o.orderNumber} ${farmerName(o.farmerId)} ${o.recipient} ${o.phone} ${o.productName} ${o.variety ?? ''} ${o.enterpriseName ?? ''} ${o.rawRemark} ${o.farmerRemark}`
         if (!hay.includes(k)) return false
       }
       return true
@@ -136,21 +142,25 @@ export default function Dashboard() {
   const windowText = (o: Order) => (o.shipWindow ? `${o.shipWindow[0]}–${o.shipWindow[1]}` : '—')
 
   // 批次修改：只套用「有填」的欄位到所有勾選訂單（走 manualEdit，會記稽核＋標人工修正判定）
+  // 不可出貨日編輯（比照訂單詳情）
+  const setBB = (i: number, p: Partial<BItem>) => setBBlocked((prev) => prev.map((x, idx) => (idx === i ? { ...x, ...p } : x)))
+  const removeBB = (i: number) => setBBlocked((prev) => prev.filter((_, idx) => idx !== i))
+  const addBBSingle = () => setBBlocked((prev) => [...prev, { kind: 'single', a: '', b: '' }])
+  const addBBRange = () => setBBlocked((prev) => [...prev, { kind: 'range', a: '', b: '' }])
+
   const applyBatch = () => {
     if (bFrom && bTo && bFrom > bTo) { flash('預定出貨區間：起日不可晚於迄日'); return }
-    if (bBlockFrom && bBlockTo && bBlockFrom > bBlockTo) { flash('不可出貨區間：起日不可晚於迄日'); return }
+    if (bBlocked.find((it) => it.kind === 'range' && it.a && it.b && it.a > it.b)) { flash('不可出貨日區間：起日不可晚於迄日'); return }
     const patch: Partial<Order> = {}
     if (bNote.trim()) patch.farmerRemark = bNote.trim()
     if (bFrom && bTo) patch.shipWindow = [fromISO(bFrom), fromISO(bTo)]
-    if (bBlockFrom && bBlockTo) {
-      const a = fromISO(bBlockFrom), b = fromISO(bBlockTo)
-      patch.blockedDates = [a === b ? a : `${a}–${b}`]
-    }
-    if (Object.keys(patch).length === 0) { flash('沒有要修改的欄位（三項都留空）'); return }
+    if (bBlocked.length) patch.blockedDates = serializeBlocked(bBlocked)
+    if (bForced) patch.forcedShipDate = fromISO(bForced)
+    if (Object.keys(patch).length === 0) { flash('沒有要修改的欄位（皆留空）'); return }
     selected.forEach((id) => manualEdit(id, patch, '營運人員（批次）'))
     flash(`已批次修改 ${selected.size} 筆`)
     setSelected(new Set()); setShowBatch(false)
-    setBNote(''); setBFrom(''); setBTo(''); setBBlockFrom(''); setBBlockTo('')
+    setBNote(''); setBFrom(''); setBTo(''); setBBlocked([]); setBForced('')
   }
 
   return (
@@ -178,7 +188,7 @@ export default function Dashboard() {
             <input
               className="gox-input"
               style={{ flex: 1, minWidth: 240 }}
-              placeholder="訂單編號 / 農友 / 收件人 / 收件電話 / 商品 / 備註"
+              placeholder="訂單編號 / 農友 / 企業名稱 / 收件人 / 收件電話 / 商品 / 備註"
               value={form.kw}
               onChange={(e) => setForm({ ...form, kw: e.target.value })}
               onKeyDown={(e) => e.key === 'Enter' && setApplied(form)}
@@ -198,20 +208,9 @@ export default function Dashboard() {
             <label>判定狀態</label>
             <MultiChips options={JUDGE_OPTIONS} selected={form.judge} onChange={(judge) => setForm({ ...form, judge })} />
           </div>
-          <div className="gox-form-row" style={{ alignItems: 'center' }}>
+          <div className="gox-form-row" style={{ alignItems: 'flex-start' }}>
             <label>企業匯單</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {BULK_FILTER.map((b) => (
-                <button
-                  key={b.key}
-                  onClick={() => setForm({ ...form, bulk: b.key })}
-                  className={form.bulk === b.key ? 'gox-btn gox-btn-primary' : 'gox-btn gox-btn-default'}
-                  style={{ padding: '4px 14px', fontSize: 13 }}
-                >
-                  {b.label}
-                </button>
-              ))}
-            </div>
+            <MultiChips options={BULK_OPTIONS} labels={BULK_LABELS} selected={form.bulk} onChange={(bulk) => setForm({ ...form, bulk })} />
           </div>
           <div className="gox-form-row" style={{ marginBottom: 0, justifyContent: 'flex-end' }}>
             <button className="gox-btn gox-btn-default" onClick={() => { setForm(EMPTY); setApplied(EMPTY) }}>清除</button>
@@ -286,6 +285,13 @@ export default function Dashboard() {
                     />
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
+                    {(o.bulkOrderType ?? '一般') !== '一般' && (
+                      <div style={{ marginBottom: 4 }}>
+                        <span style={{ display: 'inline-block', background: '#eef2f7', color: '#3a5a8c', borderRadius: 4, padding: '1px 8px', fontSize: 12, fontWeight: 600 }}>
+                          {o.bulkOrderType === '企業送禮' ? (o.enterpriseName ?? '企業送禮') : '7-11'}
+                        </span>
+                      </div>
+                    )}
                     <div>{o.orderNumber}</div>
                     <div style={{ marginTop: 10 }}>
                       {o.trackingNos?.length ? (
@@ -396,11 +402,35 @@ export default function Dashboard() {
               <span style={{ color: 'var(--gox-text-muted)' }}>～</span>
               <input type="date" className="gox-input" value={bTo} onChange={(e) => setBTo(e.target.value)} />
             </div>
+            <div className="gox-form-row" style={{ alignItems: 'flex-start' }}>
+              <label>不可出貨日</label>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {bBlocked.length === 0 && <div className="gox-hint" style={{ marginBottom: 6 }}>不改（未新增）</div>}
+                {bBlocked.map((it, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <span className="gox-tag" style={{ flexShrink: 0 }}>{it.kind === 'single' ? '單日' : '區間'}</span>
+                    <input type="date" className="gox-input" style={{ flex: 1, minWidth: 0 }} value={it.a} onChange={(e) => setBB(i, { a: e.target.value })} />
+                    {it.kind === 'range' && (
+                      <>
+                        <span style={{ color: 'var(--gox-text-muted)' }}>～</span>
+                        <input type="date" className="gox-input" style={{ flex: 1, minWidth: 0 }} value={it.b} onChange={(e) => setBB(i, { b: e.target.value })} />
+                      </>
+                    )}
+                    <button className="gox-btn gox-btn-default" style={{ padding: '4px 10px', flexShrink: 0 }} onClick={() => removeBB(i)}>✕</button>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                  <button className="gox-btn gox-btn-default" style={{ padding: '4px 12px', fontSize: 13 }} onClick={addBBSingle}>＋ 新增單日</button>
+                  <button className="gox-btn gox-btn-default" style={{ padding: '4px 12px', fontSize: 13 }} onClick={addBBRange}>＋ 新增區間</button>
+                </div>
+              </div>
+            </div>
             <div className="gox-form-row">
-              <label>不可出貨區間</label>
-              <input type="date" className="gox-input" value={bBlockFrom} onChange={(e) => setBBlockFrom(e.target.value)} />
-              <span style={{ color: 'var(--gox-text-muted)' }}>～</span>
-              <input type="date" className="gox-input" value={bBlockTo} onChange={(e) => setBBlockTo(e.target.value)} />
+              <label>指定出貨日</label>
+              <input type="date" className="gox-input" value={bForced} onChange={(e) => setBForced(e.target.value)} />
+              {bForced && (
+                <button className="gox-btn gox-btn-default" style={{ padding: '4px 10px' }} onClick={() => setBForced('')}>清除</button>
+              )}
             </div>
             <div className="gox-modal-actions">
               <button className="gox-btn gox-btn-default" onClick={() => setShowBatch(false)}>取消</button>

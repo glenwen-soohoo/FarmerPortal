@@ -138,18 +138,14 @@ export default function OrderDetail() {
             />
             <Field label="判定狀態" value={<StatusBadge status={o.judgeStatus} />} />
             <Field label="出貨狀態" value={<StatusBadge status={o.shipStatus} />} />
-            <Field label="收件人" value={`${o.recipient}　${o.phone}`} />
             <Field
-              label="收件地址"
-              value={
-                <span>
-                  {o.address}
-                  {o.remoteAgentCode && (
-                    <span className="gox-tag is-warning" style={{ marginLeft: 8 }}>偏遠客代 {o.remoteAgentCode}</span>
-                  )}
-                </span>
-              }
+              label="企業匯單"
+              value={(o.bulkOrderType ?? '一般') === '一般'
+                ? <span style={{ color: 'var(--gox-text-muted)' }}>非企業匯單</span>
+                : (o.bulkOrderType === '企業送禮' ? (o.enterpriseName ?? '企業送禮') : '7-11')}
             />
+            <Field label="收件人" value={`${o.recipient}　${o.phone}`} />
+            <Field label="收件地址" value={o.address} />
             <Field label="農友" value={farm} />
             <Field label="商品" value={`${o.productName}　${o.spec}　×${o.qty}`} />
             <Field label="溫層" value={<TempLayerTag layer={o.tempLayer} />} />
