@@ -63,7 +63,7 @@ export default function ShippingListModal({ orders, printLabel, onClose }: {
   const totalQty = orders.reduce((a, o) => a + o.qty, 0)
 
   return (
-    <div className="sl-backdrop" role="dialog" aria-modal="true" aria-label="出貨總表預覽" onClick={onClose}>
+    <div className="sl-backdrop" style={{ margin: 0 }} role="dialog" aria-modal="true" aria-label="出貨總表預覽" onClick={onClose}>
       <style>{SL_CSS}</style>
       <div className="sl-dialog" onClick={(e) => e.stopPropagation()}>
         {/* 工具列（列印時隱藏） */}

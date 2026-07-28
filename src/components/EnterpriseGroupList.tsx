@@ -85,6 +85,8 @@ export default function EnterpriseGroupList({ orders, mode, earlyEligible, today
   const [sel, setSel] = useState<Map<string, number>>(new Map()) // orderId → 份數
   const [confirmSub, setConfirmSub] = useState<SubGroup | null>(null)
   const [printing, setPrinting] = useState(false)
+  const [askPrintOrder, setAskPrintOrder] = useState<Order | null>(null) // 單行「印單」數量彈窗
+  const [printQty, setPrintQty] = useState(1)
 
   const canBatch = mode === 'print' || !!earlyEligible
   const defaultQty = (o: Order) => Math.max(1, o.trackingNos?.length ?? 0) || 1
@@ -132,7 +134,17 @@ export default function EnterpriseGroupList({ orders, mode, earlyEligible, today
       setPrinting(false)
     }, 1200)
   }
-  const printOne = (o: Order) => printIds([[o.id, 1]])
+  // 單行「印單」：開數量彈窗（比照一般 OrderCard，一次可產生多張新物流編號）
+  const openPrintOne = (o: Order) => {
+    setPrintQty(1)
+    setAskPrintOrder(o)
+  }
+  const confirmPrintOne = () => {
+    if (!askPrintOrder) return
+    const o = askPrintOrder
+    setAskPrintOrder(null)
+    printIds([[o.id, printQty]])
+  }
   const doPrintSub = (sub: SubGroup) => {
     setConfirmSub(null)
     const ids = sub.orders.filter((o) => sel.has(o.id)).map((o) => [o.id, sel.get(o.id) ?? 1] as [string, number])
@@ -255,10 +267,13 @@ export default function EnterpriseGroupList({ orders, mode, earlyEligible, today
                             </div>
                             <span className="shrink-0 whitespace-nowrap text-base font-bold text-ink">×{o.qty}</span>
                             {nums.length ? (
-                              <span className="hidden shrink-0 flex-col items-end gap-0.5 sm:flex" style={{ maxWidth: 170 }}>
-                                {nums.map((t) => (
-                                  <span key={t} className="rounded bg-mutedbg px-2 py-0.5 text-sm text-ink2">
-                                    {t}
+                              <span className="hidden shrink-0 flex-col items-end gap-0.5 sm:flex" style={{ maxWidth: 220 }}>
+                                {nums.map((t, i) => (
+                                  <span key={t} className="inline-flex items-center gap-1">
+                                    {i === 0 && nums.length > 1 && (
+                                      <span className="rounded bg-brand/[0.1] px-1.5 py-0.5 text-xs font-bold text-brand">主要編號</span>
+                                    )}
+                                    <span className="rounded bg-mutedbg px-2 py-0.5 text-sm text-ink2">{t}</span>
                                   </span>
                                 ))}
                               </span>
@@ -280,7 +295,7 @@ export default function EnterpriseGroupList({ orders, mode, earlyEligible, today
                                 <span className="text-sm text-muted">未勾選</span>
                               ) : (
                                 <button
-                                  onClick={() => printOne(o)}
+                                  onClick={() => openPrintOne(o)}
                                   className="rounded bg-brand px-4 text-base font-bold text-white active:bg-brand-dark"
                                   style={{ minHeight: 36 }}
                                 >
@@ -299,6 +314,53 @@ export default function EnterpriseGroupList({ orders, mode, earlyEligible, today
           </div>
         </section>
       ))}
+
+      {/* 單行「印單」數量彈窗：一次可產生多張，每張即時要一個新物流編號（比照一般 OrderCard） */}
+      {askPrintOrder && (
+        <ConfirmDialog
+          title="列印出貨單"
+          message={
+            <div>
+              <p>為「{askPrintOrder.recipient} 的訂單」列印出貨單；一次可產生多張，每張都會即時向黑貓要一個新的物流編號。</p>
+              <div className="mt-5 flex items-center gap-4">
+                <span className="text-lg text-ink">印</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setPrintQty((q) => Math.max(1, q - 1))}
+                    disabled={printQty <= 1}
+                    className="rounded border-2 border-line bg-white text-2xl font-bold text-ink disabled:opacity-40"
+                    style={{ width: 48, height: 48 }}
+                    aria-label="減少張數"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    value={printQty}
+                    onChange={(e) => setPrintQty(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                    className="w-16 rounded border-2 border-line text-center text-3xl font-bold text-ink"
+                    style={{ height: 48 }}
+                    aria-label="列印張數"
+                  />
+                  <button
+                    onClick={() => setPrintQty((q) => q + 1)}
+                    className="rounded border-2 border-line bg-white text-2xl font-bold text-ink"
+                    style={{ width: 48, height: 48 }}
+                    aria-label="增加張數"
+                  >
+                    ＋
+                  </button>
+                </div>
+                <span className="text-lg text-ink">張</span>
+              </div>
+            </div>
+          }
+          confirmText={`列印（${printQty} 張）`}
+          onConfirm={confirmPrintOne}
+          onCancel={() => setAskPrintOrder(null)}
+        />
+      )}
 
       {confirmSub && (
         <ConfirmDialog

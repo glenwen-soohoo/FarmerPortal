@@ -20,7 +20,7 @@ export default function Login() {
     <div className="farmer-scope flex min-h-dvh items-center justify-center bg-canvas p-6">
       <div className="w-full max-w-md rounded-card bg-white p-8">
         <div className="text-center text-3xl font-bold text-brand">農友出貨平台</div>
-        <p className="mb-8 mt-2 text-center text-base text-ink2">請輸入貓咪提供的手機帳號與密碼</p>
+        <p className="mb-8 mt-2 text-center text-base text-ink2">請輸入無毒農提供的手機帳號與密碼</p>
 
         <label className="block text-lg text-ink">
           手機帳號

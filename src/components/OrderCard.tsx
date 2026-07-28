@@ -49,6 +49,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
   const shipped = order.shipStatus === '已出貨'
   const isReprint = needsReprint(order)
   const cancelled = today ? isCancelActive(order, today) : !!order.cancelledAt // 已取消（保留 7 天內）
+  const cancelledAfterPrint = cancelled && !!order.printedAt // 已印後才取消 → 提示「請撕單」（F0 §3-3）
   // 時間相關標籤（互斥、一次一個）：逾期 > 指定今日 > 今日到期 > 指定日期 > 快到期
   const timeTag = today ? orderTimeTag(order, today) : null
 
@@ -130,7 +131,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
         {cancelled ? (
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center rounded-full bg-muted/20 px-3 py-0.5 text-lg font-bold text-ink">已取消</span>
-            <span className="text-base text-ink2">此單已取消，無需出貨</span>
+            <span className="text-base text-ink2">{cancelledAfterPrint ? '此單已取消，請把已印的貨單撕掉作廢' : '此單已取消，無需出貨'}</span>
           </div>
         ) : (
           (timeTag || isReprint) && (
@@ -219,6 +220,9 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
                           ✓
                         </span>
                       )}
+                      {i === 0 && trackingNos.length > 1 && (
+                        <span className="rounded bg-brand/[0.1] px-1.5 py-0.5 text-sm font-bold text-brand">主要編號</span>
+                      )}
                       {i === 0 && statusNode}
                     </span>
                   )
@@ -273,15 +277,19 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
         )}
       </div>
 
-      {/* 已取消：無出貨動作，只給「知道了」提早收起（保留 7 天） */}
+      {/* 已取消：無出貨動作。未印→深底白字「知道了」收起；已印後取消→紅底白字「請撕單」醒目提示撕掉已印貼紙（F0 §3-3） */}
       {cancelled && (
         <div className="oc-action flex shrink-0 flex-col justify-center">
           <button
             onClick={() => dismissCancel(order.id)}
-            className="rounded bg-ink text-lg font-bold text-white active:opacity-80"
+            className={
+              cancelledAfterPrint
+                ? 'rounded bg-danger text-lg font-bold text-white active:opacity-90'
+                : 'rounded bg-ink text-lg font-bold text-white active:opacity-80'
+            }
             style={{ minHeight: 60 }}
           >
-            知道了
+            {cancelledAfterPrint ? '請撕單' : '知道了'}
           </button>
         </div>
       )}
@@ -489,7 +497,7 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               <>
                 <p className="mt-3 text-lg text-ink2">勾選要重印的物流編號（沿用原單號、不會產生新號）：</p>
                 <div className="mt-3 space-y-2">
-                  {trackingNos.map((no) => {
+                  {trackingNos.map((no, i) => {
                     const checked = reprintSel.has(no)
                     return (
                       <label
@@ -504,6 +512,11 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
                           style={{ width: 20, height: 20, accentColor: '#1F6E43' }}
                         />
                         <span className="text-xl font-bold tracking-wide text-ink">{no}</span>
+                        {i === 0 && (
+                          <span className="ml-auto shrink-0 rounded bg-brand/[0.1] px-2 py-0.5 text-sm font-bold text-brand">
+                            以此單判斷出貨狀態
+                          </span>
+                        )}
                       </label>
                     )
                   })}

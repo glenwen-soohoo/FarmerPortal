@@ -29,14 +29,16 @@ const TITLES: Record<string, string> = {
   '/farmer/all': '所有訂單',
   '/farmer/printer': '印表機設定',
   '/farmer/me': '我的設定',
+  '/farmer/help': '操作說明',
 }
 
 // 「更多」收納的低頻分頁（≥560 底部分頁用）
-const MORE_ROUTES = ['/farmer/all', '/farmer/printer', '/farmer/me']
+const MORE_ROUTES = ['/farmer/all', '/farmer/printer', '/farmer/me', '/farmer/help']
 const MORE_ITEMS = [
   { to: '/farmer/all', label: '所有訂單查詢' },
   { to: '/farmer/printer', label: '印表機設定' },
   { to: '/farmer/me', label: '我的設定' },
+  { to: '/farmer/help', label: '操作說明' },
 ]
 
 // 今日日期顯示：'YYYY-MM-DD' → 'M/D'
@@ -79,6 +81,10 @@ export default function FarmerLayout() {
   const [fontPx, setFontPx] = useState(16)
   const [isNarrow, setIsNarrow] = useState(false) // 手機版：寬 < 560px
   const [drawerOpen, setDrawerOpen] = useState(false) // 手機版漢堡選單
+  // 開發面板顯示/隱藏（截圖時隱藏用；存 localStorage、Alt+D 可切換）
+  const [devHidden, setDevHidden] = useState(() => {
+    try { return localStorage.getItem('fp_devHidden') === '1' } catch { return false }
+  })
 
   // 監聽是否進入手機版（<560px）
   useEffect(() => {
@@ -87,6 +93,22 @@ export default function FarmerLayout() {
     on()
     mq.addEventListener('change', on)
     return () => mq.removeEventListener('change', on)
+  }, [])
+
+  // Alt+D：切換開發面板顯示/隱藏（截圖用）
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault()
+        setDevHidden((v) => {
+          const nv = !v
+          try { localStorage.setItem('fp_devHidden', nv ? '1' : '0') } catch { /* ignore */ }
+          return nv
+        })
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   // 調整 <html> 基準字級 → 農友端所有 rem 文字/間距/寬度等比縮放；手機版再縮 0.8 倍；離開還原
@@ -117,6 +139,7 @@ export default function FarmerLayout() {
     { to: '/farmer/all', label: '所有訂單查詢' },
     { to: '/farmer/printer', label: '印表機設定' },
     { to: '/farmer/me', label: '我的設定' },
+    { to: '/farmer/help', label: '操作說明' },
   ]
   const pageTitle = TITLES[loc.pathname] ?? '農友出貨平台'
   const moreActive = MORE_ROUTES.includes(loc.pathname)
@@ -284,17 +307,23 @@ export default function FarmerLayout() {
       </nav>
       )}
 
-      <DevPanel
-        today={today}
-        onChange={setToday}
-        shippableCount={shippableCount}
-        upcomingCount={upcomingCount}
-        earlyEligible={earlyEligible}
-        onToggleEarly={() => setEarlyEligible((v) => !v)}
-        farmers={farmers}
-        currentFarmerId={currentFarmerId}
-        onChangeFarmer={setCurrentFarmerId}
-      />
+      {!devHidden && (
+        <DevPanel
+          today={today}
+          onChange={setToday}
+          shippableCount={shippableCount}
+          upcomingCount={upcomingCount}
+          earlyEligible={earlyEligible}
+          onToggleEarly={() => setEarlyEligible((v) => !v)}
+          farmers={farmers}
+          currentFarmerId={currentFarmerId}
+          onChangeFarmer={setCurrentFarmerId}
+          onHide={() => {
+            setDevHidden(true)
+            try { localStorage.setItem('fp_devHidden', '1') } catch { /* ignore */ }
+          }}
+        />
+      )}
     </div>
   )
 }

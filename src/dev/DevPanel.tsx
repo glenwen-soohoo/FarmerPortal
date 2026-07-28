@@ -21,6 +21,7 @@ interface Props {
   farmers: { id: number; farm: string }[]
   currentFarmerId: number
   onChangeFarmer: (id: number) => void
+  onHide: () => void
 }
 
 export default function DevPanel({
@@ -33,6 +34,7 @@ export default function DevPanel({
   farmers,
   currentFarmerId,
   onChangeFarmer,
+  onHide,
 }: Props) {
   const [open, setOpen] = useState(false)
 
@@ -110,6 +112,17 @@ export default function DevPanel({
             >
               提早出貨資格：{earlyEligible ? '有' : '無'}（點擊切換）
             </button>
+          </div>
+
+          <div className="mt-2">
+            <button
+              onClick={onHide}
+              className="w-full rounded py-1.5 text-sm font-bold"
+              style={{ background: '#6b6b5f', color: '#fff' }}
+            >
+              🙈 隱藏面板（截圖用）
+            </button>
+            <div className="mt-1 text-xs text-gray-400">要再打開：鍵盤按 Alt + D</div>
           </div>
 
         </div>

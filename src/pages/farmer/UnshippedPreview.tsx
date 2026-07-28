@@ -289,7 +289,7 @@ export default function UnshippedPreview() {
           tone="shippable"
           groups={shippable}
           emptyMsg="目前沒有需出貨的產品"
-          desc="依產品彙總目前需出貨的訂單數量，方便一次備貨。"
+          desc="目前所有可以出的訂單，把相同規格放一起看總數量。"
           action={printListBtn}
         />
       )}
@@ -299,7 +299,7 @@ export default function UnshippedPreview() {
           tone="upcoming"
           groups={upcoming}
           emptyMsg="目前沒有預告中的產品"
-          desc="還沒到出貨時間的訂單，先預告彙總，時間到了會移到「需出貨」。"
+          desc="目前還不能出的訂單，把相同規格放一起看總數量。"
         />
       )}
       {mode === 'printed' && (
@@ -310,9 +310,9 @@ export default function UnshippedPreview() {
           emptyMsg="目前沒有印單未出的訂單"
           desc={
             <>
-              已按印單、但黑貓尚未收走的訂單，依產品彙總。
+              已經印單、但黑貓尚未收走的訂單，把相同規格放一起看總數量。
               <br />
-              當黑貓收貨並於黑貓系統切換貨態後，此處的未出單就會自動消失。
+              當黑貓收到貨並在他們的系統切換貨態後，未出訂單就會清除掉。
             </>
           }
           action={printListBtn}
@@ -326,7 +326,7 @@ export default function UnshippedPreview() {
       {dayPickerOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(43,43,38,0.5)' }}
+          style={{ background: 'rgba(43,43,38,0.5)', margin: 0 }}
           onClick={() => setDayPickerOpen(false)}
         >
           <div
