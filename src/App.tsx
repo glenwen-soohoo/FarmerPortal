@@ -8,7 +8,6 @@ import Shippable from './pages/farmer/Shippable'
 import Upcoming from './pages/farmer/Upcoming'
 import AllOrders from './pages/farmer/AllOrders'
 import UnshippedPreview from './pages/farmer/UnshippedPreview'
-import Printer from './pages/farmer/Printer'
 import Me from './pages/farmer/Me'
 import Help from './pages/farmer/Help'
 import Dashboard from './pages/admin/Dashboard'
@@ -29,7 +28,6 @@ export default function App() {
         <Route path="upcoming" element={<Upcoming />} />
         <Route path="all" element={<AllOrders />} />
         <Route path="preview" element={<UnshippedPreview />} />
-        <Route path="printer" element={<Printer />} />
         <Route path="me" element={<Me />} />
         <Route path="help" element={<Help />} />
       </Route>

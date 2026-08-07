@@ -11,13 +11,11 @@ export const FONT_LEVELS = [
   { label: '大', px: 18 },
 ]
 
-// 給子頁用：鎖住底部分頁（批次模式）、開發用測試日期、提早出貨資格、印表機、字體大小
+// 給子頁用：鎖住底部分頁（批次模式）、開發用測試日期、提早出貨資格、字體大小
 export interface FarmerOutletCtx {
   setNavLocked: (v: boolean) => void
   today: string
   earlyEligible: boolean
-  printerConnected: boolean
-  setPrinterConnected: (v: boolean) => void
   fontPx: number
   setFontPx: (v: number) => void
 }
@@ -27,16 +25,14 @@ const TITLES: Record<string, string> = {
   '/farmer/upcoming': '出貨預告',
   '/farmer/preview': '備貨總覽',
   '/farmer/all': '所有訂單',
-  '/farmer/printer': '印表機設定',
   '/farmer/me': '我的設定',
   '/farmer/help': '操作說明',
 }
 
 // 「更多」收納的低頻分頁（≥560 底部分頁用）
-const MORE_ROUTES = ['/farmer/all', '/farmer/printer', '/farmer/me', '/farmer/help']
+const MORE_ROUTES = ['/farmer/all', '/farmer/me', '/farmer/help']
 const MORE_ITEMS = [
   { to: '/farmer/all', label: '所有訂單查詢' },
-  { to: '/farmer/printer', label: '印表機設定' },
   { to: '/farmer/me', label: '我的設定' },
   { to: '/farmer/help', label: '操作說明' },
 ]
@@ -47,27 +43,6 @@ function formatToday(iso: string): string {
   return `${m}/${d}`
 }
 
-// 印表機狀態圖示（連線＝綠、未連線＝紅）
-function PrinterIcon({ connected }: { connected: boolean }) {
-  return (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={connected ? '#2E7D32' : '#C0392B'}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M6 9V3h12v6" />
-      <path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" />
-      <rect x="6" y="14" width="12" height="7" rx="1" />
-    </svg>
-  )
-}
-
 export default function FarmerLayout() {
   const { orders, currentFarmerId, farmers, setCurrentFarmerId } = useStore()
   const loc = useLocation()
@@ -75,7 +50,6 @@ export default function FarmerLayout() {
   const me = farmers.find((f) => f.id === currentFarmerId)
   const [navLocked, setNavLocked] = useState(false)
   const [today, setToday] = useState(DEFAULT_DEV_TODAY)
-  const [printerConnected, setPrinterConnected] = useState(true)
   const [earlyEligible, setEarlyEligible] = useState<boolean>(me?.earlyShipAllowed ?? false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [fontPx, setFontPx] = useState(16)
@@ -137,7 +111,6 @@ export default function FarmerLayout() {
     { to: '/farmer/upcoming', label: '出貨預告', count: upcomingCount },
     { to: '/farmer/preview', label: '備貨總覽' },
     { to: '/farmer/all', label: '所有訂單查詢' },
-    { to: '/farmer/printer', label: '印表機設定' },
     { to: '/farmer/me', label: '我的設定' },
     { to: '/farmer/help', label: '操作說明' },
   ]
@@ -153,7 +126,7 @@ export default function FarmerLayout() {
 
   return (
     <div className="farmer-scope flex h-dvh flex-col overflow-hidden bg-canvas">
-      {/* 頂部薄 header：頁名 + 印表機連線燈（用影子與內容區分隔） */}
+      {/* 頂部薄 header：日期 + 頁名 + 果園名稱（用影子與內容區分隔） */}
       <header
         className="relative z-40 flex shrink-0 items-center justify-between border-b border-line bg-white px-5 py-3"
         style={{ boxShadow: '0 3px 8px rgba(43,43,38,0.08)' }}
@@ -180,23 +153,13 @@ export default function FarmerLayout() {
             {drawerOpen ? '✕' : '☰'}
           </button>
         ) : (
-          /* 右上：果園名稱 + 印表機狀態圖示（已連線＝綠圖示；未連線＝紅圖示＋左側文字） */
+          /* 右上：果園名稱 */
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setPrinterConnected((v) => !v)}
-              className="flex items-center gap-2"
-              aria-label={printerConnected ? '印表機已連線' : '印表機未連線'}
-            >
-              {!printerConnected && (
-                <span className="whitespace-nowrap text-base font-medium text-danger">印表機未連線</span>
-              )}
-              <PrinterIcon connected={printerConnected} />
-            </button>
             <span className="whitespace-nowrap text-lg font-bold text-ink">{me?.farm}</span>
           </div>
         )}
 
-        {/* 手機版漢堡展開的選單（蓋在內容上、含所有分頁與印表機狀態） */}
+        {/* 手機版漢堡展開的選單（蓋在內容上、含所有分頁） */}
         {isNarrow && drawerOpen && (
           <>
             <div className="anim-fade fixed inset-0 z-30" onClick={() => setDrawerOpen(false)} aria-hidden />
@@ -219,17 +182,6 @@ export default function FarmerLayout() {
                   {typeof it.count === 'number' && <span className="text-base font-normal">{it.count} 單</span>}
                 </button>
               ))}
-              <button
-                onClick={() => setPrinterConnected((v) => !v)}
-                className="flex w-full items-center justify-between px-5 text-base"
-                style={{ minHeight: 52 }}
-              >
-                <span className="text-ink2">印表機</span>
-                <span className="flex items-center gap-2">
-                  {!printerConnected && <span className="font-medium text-danger">未連線</span>}
-                  <PrinterIcon connected={printerConnected} />
-                </span>
-              </button>
             </div>
           </>
         )}
@@ -241,7 +193,7 @@ export default function FarmerLayout() {
           {/* 批次模式：半透明深色遮罩罩住「選中商品以外」的內容（隨內容捲動、不蓋 header/選單） */}
           {navLocked && <div className="anim-fade absolute inset-0 z-30" style={{ background: 'rgba(43,43,38,0.55)' }} aria-hidden />}
           <Outlet
-            context={{ setNavLocked, today, earlyEligible, printerConnected, setPrinterConnected, fontPx, setFontPx } satisfies FarmerOutletCtx}
+            context={{ setNavLocked, today, earlyEligible, fontPx, setFontPx } satisfies FarmerOutletCtx}
           />
         </div>
       </main>
