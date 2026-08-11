@@ -70,6 +70,9 @@ export interface Order {
   remoteAgentCode?: string // 偏遠地區客代
   printedAt?: string
   trackingNos?: string[] // 黑貓物流單號（跟黑貓要號後才有；補單可多筆）
+  // 曾經「取新號重印」的歷史標記（後台派單狀態旁顯示；舊號另存 csRemark）。兩者可並存（先改單重印、後又過期重印）。
+  reprintedForChange?: boolean // 曾因後台改單而重印取新號
+  reprintedForExpiry?: boolean // 曾因標籤超過24小時失效而重印取新號
   failReason?: string // 農友回報「無法出貨」原因
   cancelReason?: string // 取消原因（後台取消訂單時填）
   rescheduledShipDate?: string // 貓咪改的新出貨日（配 failReason，MM/DD）

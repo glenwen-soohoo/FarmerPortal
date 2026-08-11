@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
-import StatusBadge from '../../components/StatusBadge'
+import StatusBadge, { ReprintHistoryTags } from '../../components/StatusBadge'
 import TempLayerTag from '../../components/TempLayerTag'
 import { useStore } from '../../store'
 import type { BulkOrderType, JudgeStatus, Order, ShipStatus } from '../../types'
@@ -321,6 +321,7 @@ export default function Dashboard() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                       <StatusBadge status={o.judgeStatus} />
                       <StatusBadge status={o.shipStatus} />
+                      <ReprintHistoryTags order={o} />
                     </div>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>{windowText(o)}</td>

@@ -118,12 +118,17 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
             { length: Math.max(1, count) },
             (_, i) => `9010${o.id.padStart(3, '0')}${String(i + 1).padStart(3, '0')}`
           )
-          // 改單待重印→重印：舊號作廢、寫進客服備註；第一次印（可出貨、無舊號）則不寫。
-          const csRemark =
-            o.shipStatus === '改單待重印' && (o.trackingNos?.length ?? 0) > 0
-              ? appendCs(o.csRemark, voidNote('改單重印', o.trackingNos!, nums))
-              : o.csRemark
-          return { ...o, shipStatus: '已印單', printedAt: nowPrintedAt(), trackingNos: nums, csRemark }
+          // 改單待重印→重印：舊號作廢、寫進客服備註＋設「曾改單重印」標記；第一次印（可出貨、無舊號）則不寫。
+          const wasChangeReprint = o.shipStatus === '改單待重印' && (o.trackingNos?.length ?? 0) > 0
+          const csRemark = wasChangeReprint ? appendCs(o.csRemark, voidNote('改單重印', o.trackingNos!, nums)) : o.csRemark
+          return {
+            ...o,
+            shipStatus: '已印單',
+            printedAt: nowPrintedAt(),
+            trackingNos: nums,
+            csRemark,
+            reprintedForChange: o.reprintedForChange || wasChangeReprint,
+          }
         })
       )
 
@@ -145,12 +150,17 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
                 { length: count },
                 (_, i) => `9010${o.id.padStart(3, '0')}${String(i + 1).padStart(3, '0')}`
               )
-              // 改單待重印→重印：舊號作廢、寫進客服備註；第一次印（無舊號）不寫。
-              const csRemark =
-                o.shipStatus === '改單待重印' && existing.length > 0
-                  ? appendCs(o.csRemark, voidNote('改單重印', existing, nums))
-                  : o.csRemark
-              return { ...o, shipStatus: '已印單', printedAt: nowPrintedAt(), trackingNos: nums, csRemark }
+              // 改單待重印→重印：舊號作廢、寫進客服備註＋設「曾改單重印」標記；第一次印（無舊號）不寫。
+              const wasChangeReprint = o.shipStatus === '改單待重印' && existing.length > 0
+              const csRemark = wasChangeReprint ? appendCs(o.csRemark, voidNote('改單重印', existing, nums)) : o.csRemark
+              return {
+                ...o,
+                shipStatus: '已印單',
+                printedAt: nowPrintedAt(),
+                trackingNos: nums,
+                csRemark,
+                reprintedForChange: o.reprintedForChange || wasChangeReprint,
+              }
             }
             if (count > existing.length) {
               const added = Array.from(
@@ -179,7 +189,13 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
             { length: n },
             (_, i) => `9011${o.id.padStart(3, '0')}${String(i + 1).padStart(3, '0')}`
           )
-          return { ...o, trackingNos: fresh, printedAt: nowPrintedAt(), csRemark: appendCs(o.csRemark, voidNote('標籤超過24小時失效', old, fresh)) }
+          return {
+            ...o,
+            trackingNos: fresh,
+            printedAt: nowPrintedAt(),
+            csRemark: appendCs(o.csRemark, voidNote('標籤超過24小時失效', old, fresh)),
+            reprintedForExpiry: true,
+          }
         })
       )
 

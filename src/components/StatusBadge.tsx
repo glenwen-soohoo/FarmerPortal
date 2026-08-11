@@ -1,4 +1,4 @@
-import type { JudgeStatus, ShipStatus } from '../types'
+import type { JudgeStatus, ShipStatus, Order } from '../types'
 
 // 兩軸狀態共用；對應 GoX .gox-tag 語意樣式
 const MAP: Record<JudgeStatus | ShipStatus, string> = {
@@ -24,4 +24,16 @@ const MAP: Record<JudgeStatus | ShipStatus, string> = {
 
 export default function StatusBadge({ status }: { status: JudgeStatus | ShipStatus }) {
   return <span className={`gox-tag ${MAP[status] ?? ''}`}>{status}</span>
+}
+
+// 「曾取新號重印」歷史標記：不是狀態（不進 ShipStatus），是派單狀態旁的附註，提醒後台這張的物流編號曾換過。
+// 用 is-warning（琥珀）跟一般狀態區隔；兩者可並存（先改單後又過期，反之亦然）。
+export function ReprintHistoryTags({ order }: { order: Pick<Order, 'reprintedForChange' | 'reprintedForExpiry'> }) {
+  if (!order.reprintedForChange && !order.reprintedForExpiry) return null
+  return (
+    <>
+      {order.reprintedForChange && <span className="gox-tag is-warning">曾改單重印</span>}
+      {order.reprintedForExpiry && <span className="gox-tag is-warning">曾過期重印</span>}
+    </>
+  )
 }

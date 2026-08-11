@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
-import StatusBadge from '../../components/StatusBadge'
+import StatusBadge, { ReprintHistoryTags } from '../../components/StatusBadge'
 import TempLayerTag from '../../components/TempLayerTag'
 import { useStore } from '../../store'
 import type { Order } from '../../types'
@@ -271,7 +271,15 @@ export default function OrderDetail() {
                     : <span style={{ color: 'var(--gox-text-muted)' }}>尚無物流單號</span>
                 }
               />
-              <Field label="出貨狀態" value={<StatusBadge status={o.shipStatus} />} />
+              <Field
+                label="出貨狀態"
+                value={
+                  <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                    <StatusBadge status={o.shipStatus} />
+                    <ReprintHistoryTags order={o} />
+                  </span>
+                }
+              />
               <Field label="收件人" value={`${o.recipient}　${o.phone ?? ''}`} />
               <Field label="收件地址" value={o.address ?? '—'} />
               <Field label="農友" value={farmName} />

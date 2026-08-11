@@ -687,7 +687,7 @@ export const seedOrders: Order[] = [
     rawRemark: '', farmerRemark: '',
     judgeStatus: 'AI判定完成', shipStatus: '已印單',
     shipWindow: ['06/05', '06/18'], printedAt: '2026-06-12 09:15',
-    trackingNos: ['9011801001'],
+    trackingNos: ['9011801001'], reprintedForExpiry: true,
     csRemark: '[2026-06-11 14:20] 標籤超過24小時失效，原物流編號 90078015678 作廢，改用新號 9011801001',
   },
   // B. 改單重印：後台改地址後標「改單待重印」→ 農友重印取新號（9010 系列）。已是重印後狀態。
@@ -698,7 +698,7 @@ export const seedOrders: Order[] = [
     rawRemark: '地址已更新', farmerRemark: '（地址已更新）',
     judgeStatus: '人工修正判定', shipStatus: '已印單',
     shipWindow: ['06/05', '06/18'], printedAt: '2026-06-12 10:05',
-    trackingNos: ['9010802001'],
+    trackingNos: ['9010802001'], reprintedForChange: true,
     csRemark: '[2026-06-11 16:40] 改單重印，原物流編號 90078025678 作廢，改用新號 9010802001',
   },
 
