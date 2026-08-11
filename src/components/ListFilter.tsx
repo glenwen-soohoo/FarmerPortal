@@ -1,7 +1,8 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
 import type { Order, ShipStatus } from '../types'
 import { Picker } from './Picker'
 import CalendarPicker from './CalendarPicker'
+import { mmdd, mmddToIso } from '../utils/shipDate'
 
 const uniq = (arr: string[]) => Array.from(new Set(arr))
 const opt = (arr: string[], allLabel = '全部') => [
@@ -27,7 +28,7 @@ const SHIP_GROUPS: { label: string; value: ShipGroup }[] = [
 
 interface FilterOpts {
   keyword?: boolean // 顯示關鍵字欄位（訂單編號 / 收件人 / 地址）
-  status?: boolean // 顯示出貨狀態四分類按鈕（預設「已出貨」）
+  status?: boolean // 顯示出貨狀態四分類按鈕（預設「全部」）。目前只有「所有訂單查詢」開它
 }
 
 // 觸發鈕（顯示目前值 + ▾）。定義在模組層級，元件識別穩定，避免每次 render 重掛載導致輸入焦點丟失。
@@ -46,35 +47,51 @@ function Trigger({
     <button
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
-      className={`flex flex-1 items-center justify-between rounded-lg border border-line px-3 text-left ${
-        disabled ? 'cursor-not-allowed bg-mutedbg' : 'bg-white'
+      className={`flex flex-1 items-center justify-between rounded-full border border-hairline px-4 text-left ${
+        disabled ? 'cursor-not-allowed bg-inset' : 'bg-white'
       }`}
       style={{ minHeight: 52 }}
     >
-      <span className={`text-lg font-medium ${disabled ? 'text-muted' : value ? 'text-ink' : 'text-muted'}`}>
+      <span className={`text-lg font-medium ${disabled ? 'text-ink-faint' : value ? 'text-ink' : 'text-ink-faint'}`}>
         {value || placeholder}
       </span>
-      <span className="text-ink2">▾</span>
+      <span className="text-ink-sub">▾</span>
     </button>
   )
 }
 
-// 左標籤 + 右欄位的一列
-function Row({ label, children }: { label: string; children: ReactNode }) {
+// 左標籤 + 右欄位的一列。
+// htmlFor 只在該列包的是真正可標記的表單控件時才傳（目前只有「關鍵字」的 <input>）——
+// 其餘幾列包的是按鈕／Picker Trigger，<label htmlFor> 指過去會建立錯誤的關聯。
+function Row({ label, htmlFor, children }: { label: string; htmlFor?: string; children: ReactNode }) {
+  const cls = 'w-16 shrink-0 text-base text-ink-sub'
   return (
     <div className="flex items-center gap-3">
-      <span className="w-16 shrink-0 text-base text-ink2">{label}</span>
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className={cls}>
+          {label}
+        </label>
+      ) : (
+        <span className={cls}>{label}</span>
+      )}
       <div className="flex flex-1 items-center gap-2">{children}</div>
     </div>
   )
 }
 
-// 出貨日區間比對：MM/DD 同年度字典序＝時間序。未輸入起 → 不限開始；未輸入迄 → 不限結束。
+// 出貨日區間比對。未輸入起 → 不限開始；未輸入迄 → 不限結束。
+// 三個值都是完整 ISO 'YYYY-MM-DD'：shipWindow 由後端給、from/to 由 CalendarPicker 給，
+// 所以直接字典序比即可（day 仍過一次 mmddToIso 削掉可能帶的時間部分）。
+//
+// ⚠️ 曾經壞過兩次，都是「格式混著比」：一次是 CalendarPicker 產 'MM/DD' 直接和 ISO 比
+// （'2026-07-25' > '08/01' 為 true，設了「迄」就把全部單濾光），一次是補年份時硬寫 2026。
+// 現在 CalendarPicker 直接輸出 ISO，這裡不再需要補年份。
 function inDayRange(day: string | undefined, from: string, to: string) {
   if (!from && !to) return true
   if (!day) return false
-  if (from && day < from) return false
-  if (to && day > to) return false
+  const d = mmddToIso(day)
+  if (from && d < from) return false
+  if (to && d > to) return false
   return true
 }
 
@@ -88,6 +105,8 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
   filterPanel: ReactNode
   activeCount: number
 } {
+  // useId：同頁若出現兩個篩選面板也不會撞 id（label htmlFor 用）
+  const keywordId = `${useId()}-keyword`
   const withKeyword = !!opts?.keyword
   const withStatus = !!opts?.status
   const advanced = withStatus // 進階面板（所有訂單）：商品名+規格併列；僅開關鍵字的頁面維持各自一列
@@ -97,7 +116,12 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
   const [name, setName] = useState('')
   const [spec, setSpec] = useState('')
   const [keyword, setKeyword] = useState('')
-  const [ship, setShip] = useState<ShipGroup>('shipped') // 預設「已出貨」
+  // 預設「全部」。⚠️ 原本是 'shipped'，但頁名叫「所有訂單查詢」、打開卻只顯示已出貨——
+  // 沒有已出貨紀錄的農友（新農友、或這季還沒出過貨的）一進來就是「共 0 筆／沒有符合條件的訂單」，
+  // 而底部分頁同時寫著「9 需出貨」，同一畫面兩個數字互相矛盾。
+  // 在 withStatus 為 false 的頁面（需出貨、出貨預告）這個值完全惰性：:137 的判定是
+  // `(!withStatus || ...)`、面板與標籤也都有 gate，所以改初值對那兩頁是 no-op。
+  const [ship, setShip] = useState<ShipGroup>('all')
   const [picker, setPicker] = useState<null | 'from' | 'to' | 'name' | 'spec'>(null)
 
   // 商品名選項/比對用「清洗後品種 variety」（退回 productName）；避免下拉顯示完整原始品名（中秋嚴選【…】…）
@@ -130,36 +154,41 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
   const filterButton = (
     <button
       onClick={() => setOpen((v) => !v)}
-      className={`flex w-full items-center justify-between border-2 border-line bg-white px-4 ${
+      /* ⚠️ 這顆刻意**不走膠囊**（其他控制都走了）：展開時它要與下方面板接成一體
+         （`rounded-t-lg border-b-0` 配面板的 `rounded-b-lg`），膠囊上緣接方角面板會露出縫。
+         它的角色是「會變成面板抬頭的展開鈕」，不是自由站立的控制。 */
+      className={`flex w-full items-center justify-between border-2 border-hairline bg-white px-4 ${
         open ? 'rounded-t-lg border-b-0' : 'rounded-lg'
       }`}
       style={{ minHeight: 56 }}
     >
       <span className="flex flex-wrap items-center gap-2 text-lg font-bold text-ink">
         篩選
-        {(from || to) && <span className="rounded-full bg-brand/10 px-2 py-0.5 text-sm font-bold text-brand">時間</span>}
-        {name && <span className="rounded-full bg-brand/10 px-2 py-0.5 text-sm font-bold text-brand">商品</span>}
-        {spec && <span className="rounded-full bg-brand/10 px-2 py-0.5 text-sm font-bold text-brand">規格</span>}
-        {withKeyword && kw && <span className="rounded-full bg-brand/10 px-2 py-0.5 text-sm font-bold text-brand">關鍵字</span>}
+        {(from || to) && <span className="rounded-full bg-act/10 px-2 py-0.5 text-sm font-bold text-act">時間</span>}
+        {name && <span className="rounded-full bg-act/10 px-2 py-0.5 text-sm font-bold text-act">商品</span>}
+        {spec && <span className="rounded-full bg-act/10 px-2 py-0.5 text-sm font-bold text-act">規格</span>}
+        {withKeyword && kw && <span className="rounded-full bg-act/10 px-2 py-0.5 text-sm font-bold text-act">關鍵字</span>}
         {withStatus && ship !== 'all' && (
-          <span className="rounded-full bg-brand/10 px-2 py-0.5 text-sm font-bold text-brand">
+          <span className="rounded-full bg-act/10 px-2 py-0.5 text-sm font-bold text-act">
             {SHIP_GROUPS.find((g) => g.value === ship)?.label}
           </span>
         )}
       </span>
-      <span className="text-lg text-ink2">{open ? '▲' : '▼'}</span>
+      <span className="text-lg text-ink-sub">{open ? '▲' : '▼'}</span>
     </button>
   )
 
   const filterPanel = (
     <>
       {open && (
-        <div className="anim-slide-down space-y-3 rounded-b-lg border-2 border-line bg-white p-4">
+        <div className="anim-slide-down space-y-3 rounded-b-lg border-2 border-hairline bg-white p-4">
           {/* 出貨日：一個標籤，輸入分起～迄 */}
+          {/* 觸發鈕只顯示 MM/DD：農友是用「幾月幾號」在想事情，四位年份佔掉窄螢幕的寬度。
+              年份不是被丟掉——state 存的是完整 ISO，日曆打開時標題會寫著年份。 */}
           <Row label="出貨日">
-            <Trigger value={from} placeholder="起" onClick={() => setPicker('from')} />
-            <span className="text-ink2">～</span>
-            <Trigger value={to} placeholder="迄" onClick={() => setPicker('to')} />
+            <Trigger value={mmdd(from)} placeholder="起" onClick={() => setPicker('from')} />
+            <span className="text-ink-sub">～</span>
+            <Trigger value={mmdd(to)} placeholder="迄" onClick={() => setPicker('to')} />
           </Row>
           {/* 進階面板（所有訂單）：商品名 + 規格併同一列左右擺；其餘分頁維持各自一列 */}
           {advanced ? (
@@ -178,17 +207,18 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
             </>
           )}
           {withKeyword && (
-            <Row label="關鍵字">
+            <Row label="關鍵字" htmlFor={keywordId}>
               <input
+                id={keywordId}
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 placeholder="收件人 / 手機 / 訂單編號 / 物流編號"
-                className="min-w-0 flex-1 rounded-lg border border-line px-3 text-lg text-ink"
+                className="min-w-0 flex-1 rounded-full border border-edge px-4 text-lg text-ink"
                 style={{ minHeight: 52 }}
               />
             </Row>
           )}
-          {/* 出貨狀態：四分類按鈕（預設「已出貨」），放最下方 */}
+          {/* 出貨狀態：四分類按鈕（預設「全部」），放最下方 */}
           {withStatus && (
             <Row label="出貨狀態">
               <div className="flex flex-1 gap-2">
@@ -196,8 +226,9 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
                   <button
                     key={g.value}
                     onClick={() => setShip(g.value)}
-                    className={`flex-1 rounded-lg border-2 text-base font-bold ${
-                      ship === g.value ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink2'
+                    aria-pressed={ship === g.value}
+                    className={`flex-1 rounded-full border-2 text-base font-bold ${
+                      ship === g.value ? 'border-act bg-act text-white' : 'border-hairline bg-white text-ink-sub'
                     }`}
                     style={{ minHeight: 48 }}
                   >
@@ -216,9 +247,13 @@ export function useListFilter(orders: Order[], opts?: FilterOpts): {
                 setName('')
                 setSpec('')
                 setKeyword('')
-                if (withStatus) setShip('shipped')
+                // ⚠️ 還原成 'all'（＝沒有篩選），不是 'shipped'。原本還原成 'shipped' 會讓
+                // 「清除篩選」實際上**多套一個篩選**：實測從「全部」9 筆加日期變 0 筆後按清除，
+                // 結果仍是 0 筆（狀態被設成已出貨），而且 activeCount 歸零讓這顆鈕自己消失，
+                // 農友被留在空清單裡、沒有第二次機會。一顆叫「清除篩選」的鈕不該讓結果變少。
+                if (withStatus) setShip('all')
               }}
-              className="w-full rounded-lg border-2 border-line text-base font-medium text-brand"
+              className="w-full rounded-full border-2 border-hairline text-base font-medium text-act"
               style={{ minHeight: 52 }}
             >
               清除篩選

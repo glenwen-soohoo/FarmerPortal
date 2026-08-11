@@ -19,6 +19,7 @@ const MAP: Record<JudgeStatus | ShipStatus, string> = {
   逾期未出: 'is-danger',
   無法出貨: 'is-danger',
   訂單失敗: '',
+  取消: '',
 }
 
 export default function StatusBadge({ status }: { status: JudgeStatus | ShipStatus }) {

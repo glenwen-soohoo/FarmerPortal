@@ -656,6 +656,52 @@ export const seedOrders: Order[] = [
     shipWindow: ['06/01', '06/14'], printedAt: '2026-06-02 10:30', trackingNos: ['900861060001'],
   },
 
+  // ── 農友 6：需出貨頁（6/12）示範「已取消」灰卡（cancelledAt 覆蓋層、保留 active shipStatus）──
+  // 兩張都落在 06/05–06/18 可出貨區間、取消日 06/10（距 6/12 兩天、7 天內仍顯示）；
+  // 用既有的麻豆文旦 · 禮盒(6粒裝) 讓它們自然併進同商品分組。
+  {
+    id: '69', orderNumber: '260610861069', farmerId: 6,
+    recipient: '沈冠霖', phone: '0919000069', address: '台北市中山區民權東路三段60號',
+    productName: '中秋嚴選【麻豆文旦】冠軍文旦園', variety: '麻豆文旦', spec: '禮盒(6粒裝)', qty: 1, tempLayer: '常溫',
+    rawRemark: '', farmerRemark: '',
+    judgeStatus: 'AI判定完成', shipStatus: '可出貨',
+    shipWindow: ['06/05', '06/18'],
+    cancelledAt: '06/10', // DEMO：未印被取消 → 灰卡「此單已取消，無需出貨」
+  },
+  {
+    id: '70', orderNumber: '260610861070', farmerId: 6,
+    recipient: '范筱婷', phone: '0919000070', address: '新北市板橋區縣民大道二段7號',
+    productName: '中秋嚴選【麻豆文旦】冠軍文旦園', variety: '麻豆文旦', spec: '禮盒(6粒裝)', qty: 1, tempLayer: '常溫',
+    rawRemark: '', farmerRemark: '',
+    judgeStatus: 'AI判定完成', shipStatus: '已印單',
+    shipWindow: ['06/05', '06/18'], printedAt: '2026-06-08 09:15', trackingNos: ['900861070001'],
+    cancelledAt: '06/10', // DEMO：已印後才被取消 → 灰卡「請撕掉已印出的黑貓出貨單」
+  },
+
+  // ── DEMO 範例：兩種「取新號重印」都會把舊物流編號寫進客服備註留存（後台可打開 /admin/orders/801、802 查看）──
+  // A. 過期重印：標籤超過 24 小時失效 → 重印取新號（9011 系列）。已是重印後狀態（printedAt 當天、未再逾時）。
+  {
+    id: '801', orderNumber: '260606861801', farmerId: 6,
+    recipient: '王承恩', phone: '0912000801', address: '台南市麻豆區興中路120號',
+    productName: '文旦', variety: '文旦', spec: '禮盒(8粒精選)', qty: 1, tempLayer: '常溫',
+    rawRemark: '', farmerRemark: '',
+    judgeStatus: 'AI判定完成', shipStatus: '已印單',
+    shipWindow: ['06/05', '06/18'], printedAt: '2026-06-12 09:15',
+    trackingNos: ['9011801001'],
+    csRemark: '[2026-06-11 14:20] 標籤超過24小時失效，原物流編號 90078015678 作廢，改用新號 9011801001',
+  },
+  // B. 改單重印：後台改地址後標「改單待重印」→ 農友重印取新號（9010 系列）。已是重印後狀態。
+  {
+    id: '802', orderNumber: '260606861802', farmerId: 6,
+    recipient: '李佳蓉', phone: '0912000802', address: '高雄市左營區博愛二路366號15樓（地址已更新）',
+    productName: '文旦', variety: '文旦', spec: '禮盒(6粒裝)', qty: 2, tempLayer: '常溫',
+    rawRemark: '地址已更新', farmerRemark: '（地址已更新）',
+    judgeStatus: '人工修正判定', shipStatus: '已印單',
+    shipWindow: ['06/05', '06/18'], printedAt: '2026-06-12 10:05',
+    trackingNos: ['9010802001'],
+    csRemark: '[2026-06-11 16:40] 改單重印，原物流編號 90078025678 作廢，改用新號 9010802001',
+  },
+
   // 勤業眾信企業送禮匯入（197 單，測試百單量級）
   ...deloitteOrders,
 ]
@@ -671,6 +717,18 @@ seedOrders.forEach((o) => {
   } else {
     o.trackingNos = undefined
   }
+})
+
+// 印單時間：demo 用來示範「黑貓標籤超過 24h 失效、需重新取號」（isLabelExpired 以展示日 2026-06-12 當基準）。
+// 每個農友的「已印單」交錯鋪：第 1、3… 張設成兩天前（06-10 → 超時），第 2、4… 張設當天（06-12 → 未逾時）當對照，
+// 讓任一有已印單的農友都同時看得到「超時要取新號」與「正常沿用原號重印」兩種狀態。
+const printedSeqByFarmer = new Map<number, number>()
+seedOrders.forEach((o) => {
+  if (o.shipStatus !== '已印單') return
+  if (o.printedAt) return // 已在資料裡明訂印單時間的（含下方兩筆重印範例）不覆蓋
+  const n = printedSeqByFarmer.get(o.farmerId) ?? 0
+  printedSeqByFarmer.set(o.farmerId, n + 1)
+  o.printedAt = n % 2 === 0 ? '2026-06-10 09:30' : '2026-06-12 08:10'
 })
 
 // 判定信心：依 judgeStatus 反推示範用 confidence / needsHuman（實作時由 AI 回傳、judgeStatus 反由兩者映射，見 F3 §3-3）

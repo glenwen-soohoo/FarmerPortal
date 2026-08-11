@@ -295,9 +295,13 @@ export default function Dashboard() {
                     <div>{o.orderNumber}</div>
                     <div style={{ marginTop: 10 }}>
                       {o.trackingNos?.length ? (
-                        o.trackingNos.map((t, i) => (
-                          <div key={i} style={{ color: 'var(--gox-text-sub)' }}>{t}</div>
-                        ))
+                        // 列表只顯示主要（第一個）物流編號；補單多筆以「＋N」示意，全部見詳細頁
+                        <div style={{ color: 'var(--gox-text-sub)' }}>
+                          {o.trackingNos[0]}
+                          {o.trackingNos.length > 1 && (
+                            <span style={{ color: 'var(--gox-text-muted)', marginLeft: 6 }}>＋{o.trackingNos.length - 1}</span>
+                          )}
+                        </div>
                       ) : (
                         <div style={{ color: 'var(--gox-text-muted)' }}>尚無物流編號</div>
                       )}

@@ -28,7 +28,7 @@ export function useBulkTypeFilter(list: Order[]) {
   const filtered = hasSpecial ? list.filter((o) => typeOf(o) === effectiveType) : list
 
   const toggle = hasSpecial ? (
-    <div className="inline-flex shrink-0 overflow-hidden rounded-lg border-2 border-line bg-white">
+    <div className="inline-flex shrink-0 overflow-hidden rounded-full border-2 border-hairline bg-white">
       {TABS.map((t, i) => {
         const active = effectiveType === t.key
         const count = counts[t.key]
@@ -38,17 +38,20 @@ export function useBulkTypeFilter(list: Order[]) {
             key={t.key}
             onClick={() => !locked && setBulkType(t.key)}
             disabled={locked}
+            aria-pressed={active}
             className={`flex items-center gap-2 px-5 text-lg font-bold transition-colors ${
-              i > 0 ? 'border-l-2 border-line' : ''
-            } ${active ? 'bg-brand text-white' : locked ? 'bg-mutedbg text-muted' : 'text-ink2'} ${
+              i > 0 ? 'border-l-2 border-hairline' : ''
+            } ${active ? 'bg-act text-white' : locked ? 'bg-inset text-ink-faint' : 'text-ink-sub'} ${
               locked ? 'cursor-not-allowed' : ''
             }`}
             style={{ minHeight: 52 }}
           >
-            <span style={locked ? { opacity: 0.7 } : undefined}>{t.label}</span>
+            {/* 鎖住態不再疊 opacity：#6F6A61 在 #F0EDE6 上疊 0.7 只有 2.67:1，
+                鎖住這件事已由 text-ink-faint + disabled + cursor-not-allowed 傳達。 */}
+            <span>{t.label}</span>
             <span
               className={`inline-flex items-center justify-center rounded-full px-1.5 text-sm font-bold ${
-                locked ? 'bg-line text-muted' : 'bg-danger text-white'
+                locked ? 'bg-hairline text-ink-sub' : 'bg-urgent text-white'
               }`}
               style={{ minWidth: 22, height: 22 }}
             >

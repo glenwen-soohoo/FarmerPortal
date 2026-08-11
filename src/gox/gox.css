@@ -182,3 +182,54 @@
 @media (prefers-reduced-motion: reduce) { .gox-modal-overlay, .gox-modal-box { animation: none; } }
 .gox-modal-box h4 { margin: 0 0 16px; font-size: 16px; }
 .gox-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* ── 訂單詳情改單表單補件（對齊工程師版）── */
+.gox-btn-sm { padding: 4px 12px; font-size: var(--gox-font-size-sm); }
+.gox-form-row > .gox-form-label { min-width: 110px; color: var(--gox-text); font-weight: 500; }
+.gox-form-labelwrap {
+  display: inline-flex; align-items: center; flex-shrink: 0;
+  min-width: 110px; color: var(--gox-text); font-weight: 500;
+}
+.gox-form-labelwrap > label, .gox-form-labelwrap > .gox-form-label { min-width: 0; }
+.gox-form-col { flex: 1; min-width: 160px; }
+.gox-form-sub { margin: 3px 0 0; color: var(--gox-text-muted); font-size: var(--gox-font-size-xs); line-height: 1.5; }
+
+/* 「?」說明浮層（React portal 到 body、position:fixed，避免被 .gox-card 的 overflow:hidden 裁掉） */
+.gox-tip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; padding: 0; margin-left: 5px;
+  border: 1px solid #c8c8c8; border-radius: 50%; background: #fff;
+  color: var(--gox-text-muted); font-family: inherit; font-size: 10px; font-weight: 700;
+  line-height: 1; cursor: pointer; vertical-align: 1px; flex-shrink: 0;
+}
+.gox-tip:hover { border-color: var(--gox-green); color: var(--gox-green); }
+.gox-tip:focus-visible { outline: 2px solid var(--gox-green); outline-offset: 1px; }
+.gox-tip.is-open { background: var(--gox-green); border-color: var(--gox-green); color: #fff; }
+.gox-tip-pop {
+  position: fixed; z-index: 1100;
+  width: 320px; max-width: calc(100vw - 24px);
+  padding: 9px 11px;
+  background: var(--gox-sider-bg); color: #f2f2f2;
+  border-radius: var(--gox-radius);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .28);
+  font-size: var(--gox-font-size-xs); line-height: 1.75;
+}
+.gox-tip-pop strong { color: #fff; }
+
+/* 分組小標（留白＋字重分段，不畫橫線） */
+.gox-form-group {
+  display: flex; align-items: center; gap: 8px; margin: 20px 0 10px;
+  font-weight: 600; font-size: var(--gox-font-size-sm); color: var(--gox-text);
+}
+.gox-form-group:first-child { margin-top: 0; }
+
+/* 稽核紀錄：封高度 + 兩軸滾動 + 表頭 sticky */
+.gox-log-scroll {
+  max-height: 300px; overflow: auto;
+  border: 1px solid var(--gox-card-border); border-radius: var(--gox-radius);
+}
+.gox-log-scroll .gox-table th {
+  position: sticky; top: 0; z-index: 1;
+  border-bottom: 0;
+  box-shadow: inset 0 -1px 0 var(--gox-card-border);
+}

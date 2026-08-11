@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { useAuth } from './auth'
 import Home from './pages/Home'
 import FlowDoc from './pages/FlowDoc'
 import AiLab from './pages/AiLab'
@@ -9,10 +11,16 @@ import Upcoming from './pages/farmer/Upcoming'
 import AllOrders from './pages/farmer/AllOrders'
 import UnshippedPreview from './pages/farmer/UnshippedPreview'
 import Me from './pages/farmer/Me'
-import Help from './pages/farmer/Help'
 import Dashboard from './pages/admin/Dashboard'
 import Accounts from './pages/admin/Accounts'
 import OrderDetail from './pages/admin/OrderDetail'
+
+// 未登入者導回登入頁（demo 預設即已登入；只有按「登出」後才會落到這裡）。
+function RequireFarmerAuth({ children }: { children: ReactNode }) {
+  const { token } = useAuth()
+  if (!token) return <Navigate to="/farmer/login" replace />
+  return <>{children}</>
+}
 
 export default function App() {
   return (
@@ -23,13 +31,19 @@ export default function App() {
 
       {/* 農友端 */}
       <Route path="/farmer/login" element={<Login />} />
-      <Route path="/farmer" element={<FarmerLayout />}>
+      <Route
+        path="/farmer"
+        element={
+          <RequireFarmerAuth>
+            <FarmerLayout />
+          </RequireFarmerAuth>
+        }
+      >
         <Route path="shippable" element={<Shippable />} />
         <Route path="upcoming" element={<Upcoming />} />
         <Route path="all" element={<AllOrders />} />
         <Route path="preview" element={<UnshippedPreview />} />
         <Route path="me" element={<Me />} />
-        <Route path="help" element={<Help />} />
       </Route>
 
       {/* 業務端後台 */}

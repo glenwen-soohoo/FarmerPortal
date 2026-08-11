@@ -17,10 +17,11 @@ export type ShipStatus =
   | '逾期未出'
   | '無法出貨'
   | '訂單失敗'
+  | '取消'
 
 export type TempLayer = '常溫' | '冷藏' | '冷凍'
 
-// 訂單類別（程式判定、非 AI；711 優先），見 F3 §2-2。企業送禮＝原「企業匯單」，前台一律顯示「企業送禮」
+// 企業匯單分類（前端中文 union）：一般 / 統一711 / 企業送禮
 export type BulkOrderType = '一般' | '統一711' | '企業送禮'
 
 // 手動改單稽核
@@ -32,11 +33,14 @@ export interface AuditEntry {
   to: string
 }
 
+// Order 為 SUPERSET：同時支援工程師版農友端（orderId / earliestShipDate / blockedWeekdays /
+// shipWindow 迄日可 null）與 demo 後台/外殼既有欄位（cancelledAt / cancelDismissed）。
 export interface Order {
-  id: string
+  id: string // 品項列唯一 key（api 模式 = OrderDetailId）
+  orderId?: number // 子單 Orders.Id（印單/無法出貨動作與判定層 key；api 模式填入）
   orderNumber: string
   farmerId: number
-  masterOrderId?: number // 母單 Orders.Id（同母單分組/重判用；本 id = 子單 Orders.Id）
+  masterOrderId?: number // 母單 Orders.Id（副單以 AddOrderId 指向；同母單分組/重判用）
   recipient: string
   phone: string
   address: string
@@ -49,23 +53,27 @@ export interface Order {
   farmerRemark: string // AI 產（Mongo）：給農友的作業備註（品種/數量/出貨動作）；農友端唯一顯示的備註
   driverRemark?: string // AI 產（Mongo）：印在物流單、給司機/物流的配送指示（放哪/電聯/易碎）
   csRemark?: string // SQL Orders.CustomerServiceRemark（客服備註、非 AI、不動）；補單記錄也續記於此
-  variety?: string // 清洗後品種名（程式取品名【】內文字、非 AI，見 F3 §2-1）
-  bulkOrderType?: BulkOrderType // 訂單類別（程式判定、711 優先）：統一711=品名開頭「711」；企業送禮=品名開頭「企業送禮」且客服備註能抓到企業名稱（抓不到退回一般）；一般=消費者單。見 F3 §2-2
-  enterpriseName?: string // 企業送禮專用：從客服備註抓到的企業名稱（同企業＋同水果會整併顯示）
+  variety?: string // 清洗後品種名
+  bulkOrderType?: BulkOrderType // 企業匯單分類（前台顯示 一般 / 7-11 / 企業送禮；F11）
+  enterpriseName?: string // 企業名（企業送禮才有；相同企業整併與顯示）
   judgeReason?: string // AI 判定理由（唯讀，對應 AI 回傳的 reason）
-  confidence?: number // AI 判定信心 0–1（< 門檻 → 低信心）；judgeStatus 由 confidence + needsHuman 映射（見 F3 §3-3）
+  confidence?: number // AI 判定信心 0–1（< 門檻 → 低信心）
   needsHuman?: boolean // AI 標記需人工（true → 判定失敗 / 轉人工）
   judgeStatus: JudgeStatus
   shipStatus: ShipStatus
-  shipWindow?: [string, string] // 預定出貨區間 [起, 迄]（起日即農友端顯示的可出貨起始）
+  // 預定出貨區間 [起, 迄]（起日即農友端顯示的可出貨起始）。迄日可為 null＝主站未指定最後出貨日 → 沒有截止日、不會逾期。
+  shipWindow?: [string, string | null]
   blockedDates?: string[] // 不可出貨日（AI 判定，可複數：單日 "06/07" 或區間 "06/07–06/11"）
+  blockedWeekdays?: number[] // 週期性不可出貨的星期（AI 判定，ISO 1=一…7=日）
   forcedShipDate?: string // 強制指定出貨日（客人指定，MM/DD）
-  remoteAgentCode?: string // 偏遠客代（衍生自農友農園 Farmer.remoteAgentCode、非看收件地；見 F4 §5）
+  earliestShipDate?: string // 客人要求最早出貨日（下限，MM/DD）
+  remoteAgentCode?: string // 偏遠地區客代
   printedAt?: string
   trackingNos?: string[] // 黑貓物流單號（跟黑貓要號後才有；補單可多筆）
   failReason?: string // 農友回報「無法出貨」原因
+  cancelReason?: string // 取消原因（後台取消訂單時填）
   rescheduledShipDate?: string // 貓咪改的新出貨日（配 failReason，MM/DD）
-  // 未印單被取消（F0 §3-3 軟刪除）：不再無聲消失，改標「已取消」灰卡、留原分頁、保留 7 天
+  // 未印單被取消（demo 外殼示範軟刪除卡片用）
   cancelledAt?: string // 取消日期（MM/DD）；有值＝已取消
   cancelDismissed?: boolean // 農友已按「知道了」→ 提早收起
   orderAmount?: number // 訂單金額（結算冗餘，非判定；真值以 SQL 為準）

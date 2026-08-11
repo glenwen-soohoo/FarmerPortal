@@ -141,3 +141,716 @@ body {
   font-size: 14px;
   line-height: 1.5;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   以下為工程師版農友端樣式（自 farmer-portal/web/src/index.css 併入）。
+   置於 demo 既有規則之後：農友頁的 .oc-* / .pg-* / .fp-* 與 :root --c-* 變數以此為準。
+   ═══════════════════════════════════════════════════════════════ */
+/* 後台色票的唯一來源是 gox/gox.css 的 --gox-*。
+   原本這裡另有一套 --admin-*（Element UI 殘留）全站 0 使用，已移除以免誤以為改它有效。 */
+
+/* ── 給 .tsx 動態 style 用的顏色變數 ──
+   值一律由 theme() 從 tailwind.config.js 取，所以色票仍然只有一個來源，三處同步靠建置保證。
+   為什麼需要這一層：Tailwind class 只能寫在靜態 className，而
+   `style={{ background: sevColor }}` 這種「值由 JS 算出來」的地方用不了 class。
+   CSS 變數在 inline style 裡合法，所以 .tsx 一律寫 var(--c-x)、不再寫死 hex
+   （原本 .tsx 有 30 幾處 hex 字面值，改色時得逐一去找）。
+   ⚠️ 掛在 :root 不是 .farmer-scope：這些是純色彩常數、不需要 scope，而且
+   彈窗是 position:fixed 但仍在 .farmer-scope 的 DOM 子樹內——若哪天某個元件被移到外面，
+   掛在 scope 上會靜默失效（變數解不出來 → 顏色整個消失），掛 :root 就不會。 */
+:root {
+  --c-page: theme('colors.page');
+  /* 白卡。⚠️ 這一顆是後補的：農友端曾有 11 處 `#fff` 字面值清不掉，因為 .tsx 的動態 style
+     沒有變數可換（:root 當時只有 16 顆、剛好缺白）。補上它之後 The Single Source Rule 才真的沒有例外。 */
+  --c-white: theme('colors.white');
+  --c-inset: theme('colors.inset');
+  --c-ink: theme('colors.ink');
+  --c-ink-sub: theme('colors.ink-sub');
+  --c-ink-faint: theme('colors.ink-faint');
+  --c-hairline: theme('colors.hairline');
+  --c-edge: theme('colors.edge');
+  --c-act: theme('colors.act.DEFAULT');
+  --c-act-deep: theme('colors.act.deep');
+  --c-urgent: theme('colors.urgent');
+  --c-tint-notice: theme('colors.tint-notice');
+  --c-tint-today: theme('colors.tint-today');
+  --c-chill: theme('colors.chill');
+  --c-tint-chill: theme('colors.tint-chill');
+  --c-frozen: theme('colors.frozen');
+  --c-tint-frozen: theme('colors.tint-frozen');
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Noto Sans TC', sans-serif;
+  color: theme('colors.ink');
+  background: theme('colors.page');
+  -webkit-font-smoothing: antialiased;
+}
+
+
+/* ── 農友端 token（單一來源）──
+   陰影階、動畫曲線與遮罩濃度的唯一定義處，元件一律引用這些變數、不要再各自寫死。
+   先前是逐條猜「看起來像」，每項偏一點、累加起來整體質感就不同；這些值最初抄自設計稿，
+   但設計稿已停止維護、也不在 repo 內，現在以這裡為準，不需回頭對稿。 */
+.farmer-scope {
+  /* 陰影三階：卡片靜置 / 浮起 / 彈窗 */
+  --l1: 0 1px 2px rgba(26, 24, 21, 0.05), 0 1px 3px rgba(26, 24, 21, 0.05);
+  --l2: 0 2px 6px rgba(26, 24, 21, 0.06), 0 8px 22px rgba(26, 24, 21, 0.07);
+  --l3: 0 12px 28px rgba(26, 24, 21, 0.12), 0 26px 62px rgba(26, 24, 21, 0.14);
+  /* Expo.out：起步快、收尾慢，比 ease-out 更有「被帶動」的手感 */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --scrim: rgba(26, 24, 21, 0.5);
+  /* 實體工具的鍵感：靜置有上緣內光＋極淺外投影，按下改為內凹。
+     給「可以被按下去的實體零件」：主要動作鈕（.oc-cta）、次要動作鈕（.oc-sb、.pg-hbtn、.btn-key）、
+     以及「我的設定」那顆開關的旋鈕。純資訊表面（卡片、彈窗）不用它，那些走 l1/l2/l3。 */
+  --key: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 1px 2px rgba(26, 24, 21, 0.12);
+  --key-in: inset 0 2px 4px rgba(26, 24, 21, 0.22);
+}
+
+/* 農友端基礎字級：1.25rem（≈20px），改用 rem 讓「我的設定」字體大小可整體縮放 */
+.farmer-scope {
+  font-size: 1.25rem;
+  line-height: 1.6;
+}
+
+/* 農友端數字輸入框隱藏原生上下微調箭頭：增減一律用外面的 ＋/− 按鈕，畫面乾淨一致 */
+.farmer-scope input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.farmer-scope input[type='number']::-webkit-outer-spin-button,
+.farmer-scope input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ── 觸控目標補到 44px ──
+   視覺尺寸不動，用隱形 ::after 從中心往外撐到至少 44×44。給「視覺上刻意做小」的控件用：
+   勾選方塊 40×40、±步進 40×40、開關 64×36、分段控制高約 36、彈窗小圓鈕高約 32。
+   （同一套思路的垂直版是 .pg-hbtn::after / .oc-cta::after，那兩個只需撐高。）
+
+   ⚠️ 撐開量刻意用 px（max(100%, 44px)）而不是 em：這些控件的視覺尺寸本身就寫死 px，
+   用 em 會讓可點區隨字級長大，「大」字級時把相鄰目標的可點區疊到一起——±步進之間只隔 8px。
+   ⚠️ 不要套在已經有自己 ::after 的元素上（.pg-hbtn / .oc-cta），會互相蓋掉。
+   ⚠️ **不能直接套在 <input type=checkbox> 上**：checkbox 是 replaced element，多數瀏覽器
+   不渲染它的 ::before/::after。要嘛包一層 <label class="tap44">，要嘛改用 <button role="checkbox">。
+   ⚠️ 這裡的 position: relative 只是讓 ::after 有定位脈絡，**不要當成元素本身的定位依賴**。
+   若元素自己有 absolute 定位的子元素（如「我的設定」開關的旋鈕），該元素的 className 要自己保留
+   `relative`——否則哪天有人把 tap44 拔掉，子元素就會改對更外層定位、飛到別的地方去。 */
+.tap44 { position: relative; }
+.tap44::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+/* ── 暗示性進場動畫（彈窗 / 展開收合）：淡入 + 輕微位移/縮放，讓切換不生硬 ── */
+@keyframes gbFade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes gbPop { from { opacity: 0; transform: translateY(8px) scale(0.97) } to { opacity: 1; transform: none } }
+@keyframes gbSlideDown { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: none } }
+@keyframes gbSlideUp { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+.anim-fade { animation: gbFade .18s var(--ease) both; }
+.anim-pop { animation: gbPop .28s var(--ease) both; }
+.anim-slide-down { animation: gbSlideDown .22s var(--ease) both; }
+.anim-slide-up { animation: gbSlideUp .22s var(--ease) both; }
+/* ⚠️ prefers-reduced-motion 的關閉規則搬到本檔最末（見檔尾），不要放在這裡。
+   media query **不加特異度**：`@media(...) { .oc-card { transition: none } }` 與
+   `.oc-card { transition: ... }` 同為 (0,1,0)，純看原始碼順序。而所有帶 transition 的
+   規則都在本行之後 → 放這裡的 transition:none 永遠輸，等於沒寫。 */
+
+/* ── 需出貨 / 出貨預告：商品分組 ──
+   原本是「左側 13rem 商品欄 + 右側訂單列」的兩欄骨架；改成「上方吸頂表頭 + 全寬訂單卡」，
+   橫向空間全留給訂單內容（規格字串常常很長），捲動時表頭仍在、不會不知道現在在哪個商品。 */
+.pg-grp { margin-bottom: 1.5rem; }
+.pg-gh {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  /* 1em 必須等於頁面容器的 p-4（FarmerLayout 的 <div className="…p-4">）：
+     原本是 1.1em，左右各多吐 0.1rem，窄於 60rem 時 .pg-gh-on 的 3px 標記會被 overflow-x-hidden 裁掉一半。 */
+  padding: 0.7em 1em 0.55em;
+  /* margin-bottom 0.75em：與另兩個橫向表面（卡片、展開區）一致地用細線分隔，
+     線與第一張卡的上邊框之間要留夠距離，否則會被讀成雙線。 */
+  margin: 0 -1em 0.75em;
+  /* 實色 + 下緣細線承擔「卡片從表頭底下捲過去仍看得出層次」。
+     原本是 rgba(...,0.92) + backdrop-filter: blur(8px)，但實測 8% 透明度只讓 blur 最多改變
+     0.8/255 = 0.31% 的像素值（低於一個色階、肉眼不可見），而它在 groups.map 內 render
+     → 需出貨頁常有 5–15 個 sticky 毛玻璃合成層同時存在，平板上每帧都要 backdrop 讀回。
+     純成本、零視覺效益，且該意圖已由下面那條 hairline 承擔。 */
+  background: #f5f3ee; /* 0805 V2：品名區塊底色 */
+  border-top: 1px solid theme('colors.hairline'); /* 0805 V2：上方也加分隔線 */
+  border-bottom: 1px solid theme('colors.hairline');
+}
+/* 批次進行中的那一組：左緣加主色實線，和被遮罩罩住的其他組區隔 */
+/* 圓角走 token（borderRadius.DEFAULT ＝ 0.25rem）而非寫死 4px：與勾選方塊那階一致。
+   ⚠️ 這也讓它從固定 4px 變成隨字級浮動的 4–4.5px——刻意的，勾選方塊用 Tailwind 的 `rounded`
+   本來就在浮動，寫死 4px 的這一處才是不一致的那個。 */
+.pg-gh-on { box-shadow: inset 3px 0 0 theme('colors.act.DEFAULT'); border-radius: theme('borderRadius.DEFAULT'); }
+/* ⚠️ 批次模式的動作區獨佔一整列，不要和商品資訊搶橫向空間。
+   實測（601 CSS px 的平板）：非批次時右側只有一顆鈕，左欄夠寬、一切正常；
+   一進批次模式右側變成「已勾選 N 筆」＋四顆鈕，吃掉 max-width:60%，左欄只剩約 215px →
+   「3 張 · 3 件 · 2 種規格」斷在字中間、多規格 chip 各自折成兩行變成直立藥丸，整個表頭高度爆掉。
+   flex: 1 0 100% 讓它換到自己那一列（需要 .pg-gh-on 開 flex-wrap）。 */
+.pg-gh-on { flex-wrap: wrap; }
+.pg-gh-on .pg-gh-act { flex: 1 0 100%; max-width: 100%; margin-top: 0.4em; }
+.pg-gh-act { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.35rem; max-width: 60%; }
+.pg-hbtn {
+  font-weight: 700;
+  color: theme('colors.ink');
+  background: theme('colors.white');
+  /* ⚠️ edge 不是 hairline：這顆的填色是白、坐在 page 上，兩者只有 1.11:1，
+     所以整顆的可見性**完全靠這條邊框**。hairline 對 page 只有 1.18，過不了 WCAG 1.4.11 的 3:1
+     ——強光下的平板上等於沒有輪廓。edge 對白 3.63、對 page 3.28 都過。
+     ⚠️ 這是「描邊按鈕」這一類的例外，**不要順手把其他 hairline 一起換掉**：
+     那些是節奏性分隔線，1.4.11 不管裝飾線，整組換會把「細線承擔分隔」的質感弄重。
+     （搜過整個 sRGB：離 hairline 最近的合規色是 #8F8D84，ΔE 31.1，只比 edge 的 33.6 近 2.6——
+     沒有「溫和一點」的選項，所以直接用既有色票，不另養一顆。） */
+  border: 1px solid theme('colors.edge');
+  border-radius: theme('borderRadius.full');
+  padding: 0 1rem;
+  /* max() 是 44px 地板：em/rem 會隨「我的設定 → 字級」縮小，小字級×手機 0.8 倍時會掉到 44 以下。 */
+  min-height: max(2.75rem, 44px);
+  position: relative;
+  white-space: nowrap;
+}
+/* 視覺精簡、觸控放大：隱形 ::after 上下各撐開，實際可點高度 ≥44px（Apple HIG / Material 最小尺寸）。
+   用 em 而非 rem，撐開量才跟著自己的字級走（與 .oc-cta::after 同一套）。 */
+.pg-hbtn::after { content: ''; position: absolute; left: 0; right: 0; top: -0.5em; bottom: -0.5em; }
+/* 按下＝內凹，不是縮放。原本這裡是 transform: scale(0.97)，但同一份檔案在 .oc-cta 的註解
+   已經寫下「縮放像軟體，內凹像按鈕」——兩處自相矛盾，統一成鍵感。 */
+.pg-hbtn { box-shadow: var(--key); transition: box-shadow 0.18s var(--ease); }
+.pg-hbtn:active { box-shadow: var(--key-in); }
+/* disabled 不用 opacity：整顆連背景一起半透明會把文字壓到 1.8~2.5:1。改成明確的三色配方（4.59:1）。
+   鍵感也一起收掉——按不下去的東西不該看起來可按。 */
+.pg-hbtn:disabled {
+  background: theme('colors.inset');
+  /* disabled 刻意留 hairline（不跟著上面換 edge）：WCAG 1.4.11 明文豁免 inactive components，
+     而較淡的邊框正好多一條「按不下去」的視覺線索——這裡的淡是訊息，不是缺口。 */
+  border-color: theme('colors.hairline');
+  color: theme('colors.ink-faint');
+  box-shadow: none;
+}
+/* 批次列印也是「綠色填色的主要動作」，跟著 .oc-cta 走膠囊——同一個角色不該有兩種形狀 */
+.pg-hbtn-pri {
+  background: theme('colors.act.DEFAULT');
+  border-color: transparent;
+  color: theme('colors.white');
+  min-height: max(3rem, 44px);
+  border-radius: theme('borderRadius.full');
+  padding: 0 1.1rem;
+}
+/* 紅用色票 urgent；邊框用同色 30% alpha，才能同時貼合白底與展開區（inset）兩種底。
+   帶 alpha 的色值也走 theme()——theme('colors.urgent / 30%') 這個語法可用，實測編譯成 #b3261e4d。
+   舊值 #c0392b / #ecc9c5 是色票汰換前的紅與其淡階，讓這兩顆鈕的紅比同畫面的 Tag／橫幅更亮。 */
+/* ⚠️ 邊框用**全濃度** urgent，不是 30% alpha。三個理由：
+   ① DESIGN.md 的 Danger 規格就是「白底 + 窯燒紅字 + **同色描邊**」——同色＝與文字同一個 urgent；
+   ② 同型的 BigButton danger 一直是 `border-2 border-urgent`，這裡的 30% 是唯一的異類；
+   ③ 30% 合成後只有 #E8BEBC，對白 1.68、對 page 1.51，過不了 WCAG 1.4.11 的 3:1——
+      而這顆是白底，邊框是唯一的輪廓來源。全濃度是 6.54 / 5.89。
+   ⚠️ 這與「破壞性動作不用實底紅」不衝突：那條講的是**填色**，不是邊框。填色仍是白。 */
+.pg-hbtn-dgr { color: theme('colors.urgent'); border-color: theme('colors.urgent'); }
+/* 「篩選中」的描邊按鈕：只換三個顏色、**不動幾何**。
+   需出貨頁的「品項」用得到——沒篩選時它是普通描邊鈕（白底、無彩色），篩了才轉綠底。
+   ⚠️ 不能改用 .pg-hbtn-pri：那顆的 min-height 是 48（母 class 是 44），
+   套上去會讓整條篩選列在「有沒有篩選」之間跳 4px。填色語意相同、幾何責任不同，所以另立一個。 */
+.pg-hbtn-on {
+  background: theme('colors.act.DEFAULT');
+  border-color: transparent;
+  color: theme('colors.white');
+}
+
+/* 訂單卡：各自成塊、之間留間隔（原本是 divide-y 貼在一起） */
+/* 三級節奏：卡↔卡 0.55rem、規格↔規格 1.1rem、商品↔商品 1.5rem（.pg-grp）。
+   原本 .pg-rows 與 .pg-specblock 同為 0.55rem，「依規格分塊」在畫面上完全看不出來。 */
+.pg-rows { display: flex; flex-direction: column; gap: 1.1rem; }
+.pg-specblock { display: flex; flex-direction: column; gap: 0.55rem; }
+/* #12 細分隔線：同規格塊內卡片之間、以及相鄰規格塊之間各補一條 hairline，讓密集清單有節奏。
+   規格塊之間的線落在 1.1rem 間距的上緣、明顯可見；塊內卡片間的線在卡片本身圓角外緣、克制不搶戲。
+   單張卡片（塊內只有一張＝:last-child）不套 border-bottom → 標準單卡的圓角外觀不受影響。 */
+.pg-specblock .oc-card:not(:last-child) { border-bottom: 1px solid theme('colors.hairline'); }
+/* padding-top 讓分隔線與下一張卡之間也留間距（0805 回饋：原本線黏著下一張卡）。
+   線上方 1.1rem 由 .pg-rows 的 gap 提供、下方 1.1rem 由此 padding 提供 → 線置中、上下對稱。 */
+.pg-specblock + .pg-specblock { border-top: 1px solid theme('colors.hairline'); padding-top: 1.1rem; }
+
+/* 只剩一顆主要動作 → 照內容寬（設計稿是 min-width:5.2em，不是固定欄寬）。
+   ⚠️ 動作欄被拉伸到整列高度是**刻意的**，不是 bug：.oc-row 是 `flex items-stretch`、
+   子元素掛 flex-1，於是按鈕填滿卡片右緣——觸控目標最大、右緣視覺也齊。
+   我曾誤判成 bug 加了 align-self:center，真機四案比對後退回。 */
+.oc-action { width: auto; min-width: 5.2em; }
+@media (max-width: 959px) {
+  .oc-action { min-width: 4.6em; }
+  .pg-gh-act { max-width: 100%; }
+}
+/* ── 企業送禮卡的兩欄骨架 ──
+   ⚠️ .pg-section 與 .oc-aside 原本在 JSX 被引用但全 repo 沒有定義，所以左欄既無寬度上限、
+   又帶 shrink-0 → 取 max-content。360px 手機實測：左欄吃掉 74%（235px），右欄只剩 80px，
+   收件人 span 被壓成 0px 寬、印單鈕落在容器外被自己的 overflow-hidden 切掉，
+   而 <main> 是 overflow-x-hidden → 沒有橫向捲動可補救，整個分頁在手機不可用。 */
+.oc-aside {
+  flex: 0 0 auto;
+  width: 13rem;
+  max-width: 45%;
+}
+@media (max-width: 559px) {
+  /* 手機改上下堆疊：左欄滿寬、圓角由「左右」轉成「上下」、右邊框改下邊框。
+     圓角要蓋掉 JSX 上的 rounded-l-card / rounded-r-card——後者是 (0,1,0)，
+     所以右欄那條用子選擇器湊到 (0,2,1) 確保贏，不必動 JSX。 */
+  .pg-section {
+    flex-direction: column;
+  }
+  .oc-aside {
+    width: 100%;
+    max-width: none;
+    border-right: 0;
+    border-bottom: 1px solid theme('colors.hairline');
+    /* 圓角走 token，不寫死 1rem（值相同，但改 card 半徑時這兩處會跟著動） */
+    border-radius: theme('borderRadius.card') theme('borderRadius.card') 0 0;
+  }
+  .pg-section > .oc-aside + div {
+    border-radius: 0 0 theme('borderRadius.card') theme('borderRadius.card');
+  }
+}
+
+/* 備貨總覽的卡片：桌機由 JSX 的 w-2/3 控寬，<960 加寬到滿欄。
+   原本這裡還有 .preview-grid（兩欄並排）＋它的單欄斷點，但版面早已改成單欄、
+   0 個 .tsx 用到那個 class，留著會讓人以為改它有效。 */
+@media (max-width: 959px) {
+  .preview-card { width: 100%; }
+}
+
+/* ── 訂單卡的字級尺度 ──
+   `.farmer-scope` 是 20px 基準、Tailwind 級距又是固定 rem，兩者相乘讓卡片內每一項都偏大
+   （實測規格數量 30px、時間標籤 20px、主鈕字 30px）。這裡把卡片自己拉回 1rem 基準、
+   內部一律用 em 表示，整張卡才會等比、也才跟得上「我的設定 → 字級」的縮放。 */
+/* 卡片外層：表面級圓角。原本這裡寫死 16px、而 rounded-card token 是 8px，
+   等於「名為 card 的 token 不是卡片在用的圓角」；token 已改成 1rem，這裡改走 token。
+   overflow:hidden 讓底部展開區貼齊圓角。 */
+.oc-card {
+  /* 1rem 基準：卡片內一律用 em，整張等比、也跟著「我的設定 → 字級」縮放（設計稿同做法） */
+  font-size: 1rem;
+  /* 等寬數字：多張卡並列時數量欄對齊、可直接縱向掃。掛在卡上一次搞定，不必逐個 class 加。 */
+  font-variant-numeric: tabular-nums;
+  border: 1px solid theme('colors.hairline');
+  border-radius: theme('borderRadius.card');
+  box-shadow: var(--l1);
+  overflow: hidden;
+  transition: box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
+}
+/* 白底用 :where() 降到 0 特異度，讓 JSX 的 bg-* utility 蓋得過去。
+   ⚠️ 原本 background:#fff 寫在 .oc-card 裡是 (0,1,0)，與 Tailwind 的 bg-* utility 同分、
+   但編譯輸出排在它後面 → 白底永遠贏，導致「逾期淡紅底」與「批次選中灰底」兩條刻意的冗餘視覺通道
+   完全不生效（OrderCard 的註解還特別保護過它們）。實測編譯後 CSS 確認過。
+   ⚠️ 逾期底現在是實色 tint-overdue（#F9EEED，ink 14.98 / ink-sub 6.06 / ink-faint 4.73 全過）。
+   這行原本記的「合成為 #F7E9E9 … .oc-k 4.55」是錯的：那是假設卡片坐在白底上算的，
+   但需出貨頁的祖先鏈沒有底色、半透明紅其實合成到頁底 page → #EEDFD9，ink-faint 只有 4.14。 */
+:where(.oc-card) {
+  background: theme('colors.white');
+}
+/* gate hover 能力：主要通路是平板，觸控點擊會讓 :hover 黏在卡上不退（WebView 尤其明顯）。 */
+@media (hover: hover) and (pointer: fine) {
+  .oc-card:hover { box-shadow: var(--l2); }
+}
+/* 上半列（可點） */
+.oc-row {
+  padding: 0.75em 0.9em;
+  gap: 0.75em;
+  cursor: pointer;
+}
+/* 取消狀態卡的內容列。與 .oc-row 同一組 padding／gap，但**不共用**——.oc-row 帶 cursor: pointer，
+   而取消卡整張不可點（只有「知道了」可按），游標會說謊。
+   ⚠️ 為什麼取消卡要套 .oc-card：原本它是裸的 `.oc-row + bg-inset`，沒有邊框／圓角／陰影，
+   夾在一排真卡片之間讀起來像掉出系統；而且內部用 Tailwind 的絕對 rem（text-2xl 等），
+   沒有跟著卡片的 1rem 基準等比——「大」字級下品名 27px，比正常卡片的 .oc-qty（23.4px）還大。 */
+.oc-cancel {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  padding: 0.75em 0.9em;
+}
+/* 取消訊息（「請撕掉已印出的黑貓出貨單」／「無需出貨」）：1em 粗體。
+   ⚠️ 不用 .oc-win（0.9em）——那是資料值的級距，而這行是農友要照做的**指示**（撕黑貓單是實體動作）。
+   品名與規格雖然是 1.3em，但它們被刪除線＋ink-faint 視覺降級了，所以這行才是卡上最該讀到的內容。 */
+.oc-cancel-msg { font-size: 1em; font-weight: 700; }
+/* 焦點環見下方「鍵盤焦點環」區塊 —— 訂單卡需要內縮 offset（.oc-card 有 overflow:hidden），
+   且必須贏過那裡的通用規則，所以寫在那邊比較好對照。這裡刻意不放，避免又出現一條被蓋掉的死規則。 */
+/* 資訊行距：設計稿是 .3em~.35em，原本 mt-4（16px）把卡片撐得很鬆 */
+/* 標籤與規格同一行：nowrap 讓標籤黏在數量後面（設計稿的 .l1）；規格過長時由 min-width:0 收縮 */
+.oc-l1 { display: flex; align-items: baseline; gap: 0.55em; flex-wrap: nowrap; min-width: 0; }
+.oc-l1 > span:first-child { min-width: 0; }
+@media (max-width: 559px) { .oc-l1 { flex-wrap: wrap; } }
+/* 細線承擔分隔：把「這是什麼貨」（規格×數量×溫層）與「何時出、要注意什麼」分成兩欄。
+   間距刻意只給 0.3em——上方註解記錄過 mt-4（16px）把卡片撐得很鬆，不要把那個留白復活。 */
+.oc-l2 {
+  margin-top: 0.3em;
+  padding-top: 0.3em;
+  border-top: 1px solid theme('colors.hairline');
+}
+/* 卡內只留**一條**格線——規格列下方那條。原本三個 .oc-l2 各自帶 border-top，
+   一張含「預計出貨 + 出貨提醒 + 狀態」的卡會出現三條線，讀起來像表格而不是分隔。
+   用 ~ 而非 :not(:first-of-type)：三列都是條件渲染，第一個實際出現的那個才該有線。 */
+.oc-l2 ~ .oc-l2 { border-top: 0; padding-top: 0; }
+
+/* 展開區：卡片底部「整張寬」的一段（含動作欄底下），上緣一條分隔線 + 淡底。
+   ⚠️ 不是塞在資訊欄裡的內縮圓角盒——那會只有左半寬、和設計稿差很多。 */
+.oc-foot {
+  border-top: 1px solid theme('colors.hairline');
+  background: #f5f3ee; /* 0805 V2：展開區底色 */
+  padding: 0.75em 0.9em 0.9em;
+  /* 收件明細（左，2 欄）＋ 次要動作（右）並排＝三欄。
+     ⚠️ 用 stretch 不用 flex-end：右側按鈕欄常比左側資訊高，整排 flex-end 會把資訊往下推、頂部空一段。
+     改成資訊靠頂（.oc-det align-self flex-start）、按鈕仍靠底（.oc-dacts align-self flex-end）。 */
+  display: flex;
+  align-items: stretch;
+  gap: 1em;
+}
+.oc-det { align-self: flex-start; }
+.oc-dacts { align-self: flex-end; }
+/* 展開區次要動作：右欄直排（多箱追加補單在上、無法出貨在下），兩鈕等寬（stretch）、圓角比照印單（.oc-cta）。
+   只有多箱追加補單加高（.oc-sb-tall）；無法出貨維持一般高。 */
+.oc-dacts { display: flex; flex-direction: column; align-items: stretch; gap: 0.55em; flex-shrink: 0; }
+.oc-dacts .oc-sb { border-radius: theme('borderRadius.card'); font-size: 0.95em; padding-left: 0.9em; padding-right: 0.9em; white-space: nowrap; }
+.oc-dacts .oc-sb-tall { min-height: max(5.5em, 80px); }
+/* 無法出貨在舊的橫排用 margin-left:auto 靠右；直排 stretch 下它會擋掉等寬，這裡歸零 */
+.oc-dacts .oc-sb-dgr { margin-left: 0; }
+.oc-sb {
+  font-size: 0.86em;
+  font-weight: 700;
+  padding: 0.75em 1.15em;
+  border-radius: theme('borderRadius.full');
+  min-height: max(3.2em, 44px);
+  background: theme('colors.white');
+  /* ⚠️ edge：白底鈕坐在白卡上，填色對比 1.00，邊框是唯一的輪廓來源（同 .pg-hbtn 的理由）。 */
+  border: 1px solid theme('colors.edge');
+  color: theme('colors.ink-sub');
+}
+/* 無法出貨壓最右：破壞性動作和其他選項拉開距離，避免誤按 */
+/* 同 .pg-hbtn-dgr：全濃度 urgent 才是「同色描邊」，30% 過不了 1.4.11。 */
+.oc-sb-dgr { border-color: theme('colors.urgent'); color: theme('colors.urgent'); margin-left: auto; }
+
+/* 已出貨唯讀 / 展開箭頭 */
+.oc-ro { align-self: center; font-size: 0.82em; font-weight: 700; color: theme('colors.ink-faint'); padding: 0 0.6em; flex: 0 0 auto; }
+.oc-chev { align-self: center; color: theme('colors.ink-faint'); font-size: 0.78em; flex: 0 0 auto; transition: transform 0.22s var(--ease), color 0.22s var(--ease); }
+.oc-chev.is-open { transform: rotate(90deg); color: theme('colors.act.DEFAULT'); }
+
+/* 尚未到出貨時間：虛線框灰塊（不可按） */
+.oc-locked {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: 0.82em;
+  font-weight: 700;
+  line-height: 1.25;
+  /* 與 .oc-cta 同一個動作格，圓角必須一致（原本 0.5rem，同格兩種形狀） */
+  border-radius: theme('borderRadius.card');
+  background: theme('colors.inset');
+  border: 1px dashed theme('colors.hairline');
+  color: theme('colors.ink-faint');
+  min-height: 3.5em;
+}
+/* 字級＝改動前的實測值（text-3xl / text-base / text-2xl / text-xl / text-lg），
+   用 rem 寫死，「我的設定 → 字級」調 html font-size 時仍會等比縮放。 */
+.oc-qty { font-size: 1.3em; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
+.oc-k { font-size: 0.73em; }
+.oc-win { font-size: 0.9em; font-weight: 700; }
+.oc-rem { font-size: 0.86em; font-weight: 700; }
+.oc-status { font-size: 0.78em; font-weight: 700; }
+/* 主要動作：視覺收斂，觸控靠隱形 ::after 撐開（原本 120px 高、30px 字，太重）。
+   圓角走**表面級 1rem**，不是控制級 0.5rem——它的尺度（實測 83×111 CSS px）比其他控制大一級，
+   而它坐在 .oc-card 的 1rem 圓角裡，子層比父層尖銳會讀成沒做完。
+   ⚠️ 這顆**刻意不走膠囊**，是「膠囊＝控制」那條規則在本專案唯一的例外。
+   2026-08-04 在真機（601 CSS px 的平板）把四案並排實測後決定：
+     · 它會被 .oc-action 拉伸到整張卡的高度（實測 83×111 CSS px，比例 0.75），
+       膠囊在這個比例下讀作橢圓 blob 而不是藥丸；
+     · 兩行標籤（提早/印單、印單+取新物流編號）的四個角會被弧線切到，而兩行是常態。
+   Apple 那條「capsule 給控制」指的是**小到中尺寸**的控制；這顆在尺度上接近容器，所以留方。
+   其餘控制（分頁、表頭鈕、次要鈕、彈窗鈕、選項鈕、輸入欄、標籤、色條）都是單行且寬>高，
+   膠囊在那些地方成立，不要一起退回。
+   字距歸零：中文正字距會把「印單」撐成兩個獨立字，且正字距在最後一字後也留空隙，
+   在 place-items:center 的格子裡讓字塊視覺偏左。 */
+.oc-cta { font-size: 0.98em; font-weight: 700; min-height: max(3.5em, 44px); line-height: 1.25; position: relative;
+          /* 表面級 1rem，與它所在的卡片（.oc-card）同半徑。
+             不是控制級 0.5rem：這顆坐在 16px 圓角的卡片裡，8px 會讓子層比父層更尖銳、讀起來沒做完。
+             也不是膠囊——見下方那段實測記錄。 */
+          border-radius: theme('borderRadius.card'); display: grid; place-items: center; box-shadow: var(--key); }
+/* 已印單那顆「重印」是次要性質：描邊、不搶主色 */
+/* ⚠️ edge：透明底疊在白卡上，等同白底白卡，邊框是唯一的輪廓來源（同 .pg-hbtn 的理由）。 */
+.oc-ghost { background: transparent; border: 1px solid theme('colors.edge'); color: theme('colors.ink-sub'); font-weight: 700; font-size: 0.9em; }
+.oc-cta::after { content: ''; position: absolute; left: 0; right: 0; top: -0.5em; bottom: -0.5em; }
+/* 按下＝內凹，不是縮放：縮放像軟體，內凹像按鈕。唯一的實體工具該有實體回饋。 */
+.oc-cta:active { box-shadow: var(--key-in); }
+.oc-sb { transition: box-shadow 0.18s var(--ease); }
+.oc-sb:active { box-shadow: var(--key-in); }
+
+/* BigButton 的鍵感。它是彈窗與「我的設定」裡所有主要／次要動作鈕，卻只換背景色、沒有實體回饋——
+   --key 的註解一直寫著「給主要動作與次要動作鈕」，但這個元件從來沒接上去。
+   做成 class 而不是寫進 BigButton 的 inline style：按下態需要 :active，inline style 表達不了。 */
+/* ⚠️ transition 一次列完四個屬性，不要在 JSX 上再掛 transition-colors：
+   兩者同為 (0,1,0)，而 index.css 排在 @tailwind utilities 後面 → 這條的簡寫會贏，
+   把 transition-property 覆寫成只有 box-shadow，variant 的 active:bg-* 就變成瞬間切換。 */
+.btn-key {
+  box-shadow: var(--key);
+  transition: box-shadow 0.18s var(--ease), background-color 0.15s var(--ease),
+    border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+.btn-key:active { box-shadow: var(--key-in); }
+.btn-key:disabled { box-shadow: none; }
+/* letter-spacing: 0 不是冗餘，是繼承護欄——字距以「計算後的絕對 px」向下繼承，
+   父層若有正字距，落到 0.62em 的子層等於被放大近 1.6 倍。 */
+/* 0.62em → 0.75em ＋ 10px 地板。移除手機 0.8 倍之後，0.62em 在「小」字級下仍只有 8.7px。
+   ⚠️ 地板要低到只在「小」時才可能生效：0.75em 在「大」是 13.5px，地板若設到 12px
+   會連「大」一起夾住 → 那階不再隨字級設定變，等於把功能弄壞。 */
+.oc-cta-sub { font-size: max(0.75em, 10px); font-weight: 500; letter-spacing: 0; }
+
+/* 收件資訊展開區：兩欄 grid（平板橫向空間夠，六個欄位一次看完、不必再往下捲）。
+   六格剛好排滿三列，沒有跨欄的格子——原本收件地址與配送提醒各佔一整列（.oc-det-w，
+   grid-column: 1/-1），等於用兩列裝兩個短欄位。併回格子後展開區少一列，那條規則歸零使用已移除。 */
+.oc-det {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55em 1em;
+  flex: 1;
+  min-width: 0;
+}
+/* 不設 text-transform：標籤全是中文（訂單編號／收件人／溫層…），uppercase 對 CJK 永遠無效。 */
+/* 0.66em → 0.75em ＋ 10px 地板（同 .oc-cta-sub 的理由：原本在「小」只有 9.2px）。
+   ⚠️ 其餘小級距（.oc-k 0.73em／.pg-sc 0.74em／.fp-hd-badge 0.72em）在「小」是 10.1–10.4px，
+   已在 10px 之上、不需地板；但**不要再往下調**，那條線就在腳下。 */
+.oc-det-k { font-size: max(0.75em, 10px); letter-spacing: 0.06em; color: theme('colors.ink-faint'); }
+.oc-det-v { font-size: 0.88em; margin-top: 0.08em; }
+@media (max-width: 559px) {
+  .oc-det { grid-template-columns: 1fr; }
+  /* 手機橫向空間不夠並排三欄：明細與動作改上下堆疊，動作鈕撐滿寬 */
+  .oc-foot { flex-direction: column; align-items: stretch; }
+}
+
+/* 急迫度色條：卡片內細條。原本是 32px 粗左緣，吃掉太多橫向空間、視覺也過重。
+   全圓膠囊。⚠️ 這裡曾一度改成 2px（理由是「膠囊讀作裝飾、直角讀作帳冊登記標記」），
+   但那是隱喻主張不是硬規則，已按使用者決定復原：色條與溫層標籤維持膠囊，當作親切的視覺裝飾。
+   ⚠️ 它是 aria-hidden 的純視覺編碼，急迫度的訊息一律由 Tag 文字承載（見 OrderCard 的 sevColor 對應）。 */
+.oc-sev {
+  flex: 0 0 auto;
+  width: 0.55em;
+  border-radius: theme('borderRadius.full');
+  align-self: stretch;
+}
+/* 批次勾選框（checkbox + 份數）：DOM 順序本來就在資訊欄之後，桌機／平板維持預設 order＝排在卡片最右緣（#8）。
+   （原本用 order:-1 硬拉到最左；改成靠右後，左緣留給急迫度色條 .oc-sev。）
+   手機直向堆疊時才移回最上（見下方 media query）。 */
+
+/* 手機版 <560：卡片內改上下堆疊——資訊滿版、按鈕移到卡片下方橫排 */
+@media (max-width: 559px) {
+  .oc-row { flex-direction: column; }
+  /* 勾選框在直向堆疊時回到左上（order:-1 只在手機生效；桌機／平板維持靠右——見 #8） */
+  .oc-select { order: -1; flex-direction: row; align-items: center; align-self: flex-start; }
+  /* 手機版份數改水平（DOM ＋/數字/−）→ row-reverse 顯示為 −/數字/＋ */
+  .oc-stepper { flex-direction: row-reverse; }
+  /* row-reverse：無法出貨(DOM 最後)移到左邊，印單(主要動作)留右邊給右手拇指 */
+  .oc-action {
+    width: 100%;
+    flex-direction: row-reverse;
+    flex-wrap: wrap;
+  }
+  /* 印單等主要動作佔比大，無法出貨小 */
+  .oc-action > * {
+    flex: 2 1 0;
+    min-height: max(3rem, 44px) !important;
+    height: auto !important;
+  }
+  .pg-gh { flex-direction: column; }
+  .pg-gh-act { justify-content: flex-start; }
+}
+
+/* 後台基礎字級由 gox/gox.css 的 .gox-page 負責（同樣 14px）。
+   原本這裡另有一個 .admin-scope 定義相同字級，但從未套用到任何元素，已移除。 */
+
+/* 群組表頭：同樣 1rem 基準 + em（設計稿 .gh 的 1.12em / 0.78em） */
+.pg-gh { font-size: 1rem; }
+.pg-nm { font-size: 1.35em; font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; }
+.pg-mt { font-size: 0.78em; }
+/* chip 一律不折行：它是原子標籤，內部折行會讓膠囊變成直立的藥丸。
+   容器有 flex-wrap，放不下時整顆換行、不會被裁掉。 */
+.pg-sc { font-size: 0.74em; white-space: nowrap; }
+.pg-hbtn { font-size: 0.8em; }
+
+/* ── 外殼：頂部 header 與底部分頁（對齊設計稿）── */
+/* 半透明 + 毛玻璃：內容從邊緣捲過去時仍有層次，不用靠厚陰影 */
+.fp-hd {
+  /* 實色白 + 下緣細線。原本是 rgba(...,0.84) + backdrop-filter，與 .pg-gh 第 2 輪移除的是同一個問題：
+     模糊的是「永遠不會變的平色」，純 GPU 成本零視覺效益。⚠️ 我先前回報「第 2 輪已移除」是錯的，
+     第 2 輪只移除了 .pg-gh 的，這兩處一直還在。 */
+  background: theme('colors.white');
+}
+.fp-tabs {
+  font-size: 1rem;
+  gap: 0.28em;
+  padding: 0.5em 0.55em;
+  background: theme('colors.white');
+}
+/* 分頁項：數字在上、標籤在下（原本是同一行「需出貨 6 單」） */
+.fp-tb {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05em;
+  /* ⚠️ 補 44px 地板：原本只有 3.5em，而 em 這裡是 0.88rem——「小」字級（html 14px）下
+     3.5 × 0.88 × 14 = 43.1px，剛好破線。其他觸控目標都寫 max(_, 44px)，只有這裡漏了。 */
+  min-height: max(3.5em, 44px);
+  /* 垂直 padding 0.5em 不是 0.7em：膠囊靠 min-height 決定高度，多給的垂直 padding 只會把
+     藥丸撐成偏方的圓角矩形（實測比例 2.18，設計稿是 2.69）。左右 0.9em 是膠囊必要的圓弧讓位。 */
+  padding: 0.5em 0.9em;
+  /* 分段控制＝膠囊（Apple 的 segmented control 正是這個形狀）。左右 padding 從 0.2em 加到 0.9em：
+     膠囊的圓弧會吃掉字的邊界。 */
+  border-radius: theme('borderRadius.full');
+  font-size: 0.88em;
+  font-weight: 700;
+  color: theme('colors.ink-faint');
+  white-space: nowrap;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+/* 圖示在上、標籤在下，計數掛圖示右上角 —— 主流 App 底部分頁的標準版型。
+   尺寸一律 em：跟著「我的設定」的字級一起長，寫死 px 會在放大字級時失衡。 */
+.fp-tb-w { position: relative; display: block; line-height: 0; }
+.fp-tb-ic { display: block; width: 1.6em; height: 1.6em; }
+/* 角標刻意不用慣例的最小尺寸（那約 10.5px）：20px／12.5px 一臂距離才讀得到，
+   而角標多大並沒有規範。形狀仍是標準角標，所以「像上市 App」這件事沒有讓步。
+   ⚠️ 計數為 0 時不渲染（慣例）——首次載入時頁面內容自己顯示「載入中…」，
+   所以「沒有角標」不會跟「還沒載入」混淆，不需要另外傳載入旗標進來。 */
+.fp-tb-b {
+  position: absolute;
+  top: -0.5em;
+  right: -0.78em;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 0.32em;
+  border-radius: theme('borderRadius.full');
+  background: theme('colors.urgent');
+  color: theme('colors.white');
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  /* 0.89em 是相對 .fp-tb 的 0.88em，合起來約 12.5px；上面的 1.6em 是相對本身字級＝20px */
+  font-size: 0.89em;
+  font-weight: 700;
+  line-height: 1.6em;
+  text-align: center;
+}
+/* 選中＝淡綠底 + 綠字（原本是整格實心 bg-act + 白字，在畫面下緣過重） */
+.fp-tb.is-on { background: theme('colors.act.DEFAULT / 10%'); color: theme('colors.act.DEFAULT'); }
+.fp-tb.is-locked { color: theme('colors.ink-faint'); }
+
+/* 鍵盤焦點環：瀏覽器預設只有 0.67px、在這個配色上幾乎看不見。
+   只用 :focus-visible，滑鼠／觸控點擊不會出現。 */
+.farmer-scope button:focus-visible,
+.farmer-scope a:focus-visible,
+.farmer-scope [role='button']:focus-visible,
+.farmer-scope input:focus-visible {
+  outline: 3px solid theme('colors.act.DEFAULT');
+  outline-offset: 2px;
+}
+/* ⚠️ 卡片內元素必須用「內縮」offset：.oc-card 有 overflow:hidden，外擴的環會被整圈裁掉。
+   目標是 chevron（訂單卡展開收件資訊的語意入口，真 <button>）。
+   特異性要點：上面那條 `.farmer-scope button:focus-visible` 是 (0,2,1)，
+   這裡 `.farmer-scope .oc-chev:focus-visible` 是 (0,3,0) → b 較大，贏，內縮 offset 生效。
+   ⚠️ 這條原本綁在 `.oc-row[role='button']` 上。那個 role 已移除（它包著 6 個真 <button>，
+   role=button 不可含互動元素），整列不再可聚焦，鍵盤焦點落在 chevron 上。 */
+.farmer-scope .oc-chev:focus-visible {
+  outline: 3px solid theme('colors.act.DEFAULT');
+  outline-offset: -3px;
+}
+
+/* P3：彈窗面板本身。useDialog 在開啟時把焦點移到帶 role="dialog" 的容器上，
+   但焦點環清單原本沒涵蓋它 → 鍵盤使用者只拿到瀏覽器預設的 0.67px 環，在這個配色上幾乎看不見。
+   ⚠️ offset 用內縮：9 個彈窗都是 rounded-card + maxHeight 85vh（多數還有 overflow-y: auto），
+   外擴的環會貼在圓角外面、或被捲動容器裁掉。
+   ⚠️ 只在 :focus-visible 出現，所以滑鼠／觸控開彈窗不會看到整片綠框——這點實測過：
+   真實指標輸入下 :focus-visible 為 false。 */
+.farmer-scope [role='dialog']:focus-visible {
+  outline: 3px solid theme('colors.act.DEFAULT');
+  outline-offset: -3px;
+}
+/* 破壞性動作的焦點環用自己的語意色：綠環配紅鈕是語意錯配。 */
+.farmer-scope .oc-sb-dgr:focus-visible,
+.farmer-scope .pg-hbtn-dgr:focus-visible {
+  outline-color: theme('colors.urgent');
+}
+
+/* 頂部 header：設計稿 .hd 的尺度（.dt 1.45em / .ti 1em / .badge .72em / .farm .82em） */
+.fp-hd { font-size: 1rem; padding: 0.8em 1.1em; }
+/* 今日日期不設負字距：與分頁單數同理，是全站最需一眼看懂的兩個數字 */
+.fp-hd-dt { font-size: 1.45em; font-weight: 700; }
+.fp-hd-ti { font-size: 1em; font-weight: 500; }
+.fp-hd-badge { font-size: 0.72em; font-weight: 700; padding: 0.28em 0.65em; }
+.fp-hd-farm { font-size: 0.82em; font-weight: 700; }
+
+/* ── 橫幅：連線中斷／操作失敗／新訂單（設計稿 .banner 的尺度）──
+   標題與訊息同一字級、靠字重分主次；原本是 text-xl + text-base 兩級再配 24px emoji，
+   比下方卡片的標題還重，橫幅一出現整個視覺重心就被拉到頁首。 */
+.fp-bn {
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.7em 1.1em;
+  border-bottom: 1px solid theme('colors.hairline');
+}
+.fp-bn-t { font-weight: 700; white-space: nowrap; }
+.fp-bn-m { flex: 1; color: theme('colors.ink-sub'); }
+/* 按鈕字級照設計稿 0.85em，但另給 min-height：設計稿換算只有約 24px 高，低於 44px 觸控下限。 */
+.fp-bn-b {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0.5em 1.1em;
+  border: 1px solid theme('colors.hairline');
+  border-radius: theme('borderRadius.full');
+  background: theme('colors.white');
+  font-size: 0.85em;
+  font-weight: 700;
+  color: theme('colors.ink');
+}
+.fp-bn-b.is-pri { border-color: theme('colors.act.DEFAULT'); background: theme('colors.act.DEFAULT'); color: theme('colors.white'); }
+/* 三種語意底色。連線中斷原本是深琥珀底白字（整條深色橫槓，比失敗還搶眼），改成與其餘同一套淺底深字。 */
+.fp-bn.is-err { background: theme('colors.urgent / 10%'); color: theme('colors.urgent'); }
+.fp-bn.is-warn { background: theme('colors.tint-notice / 12%'); color: theme('colors.notice'); }
+.fp-bn.is-new { background: theme('colors.act.DEFAULT / 10%'); color: theme('colors.act.DEFAULT'); }
+
+
+
+/* ═══ 停用動畫（prefers-reduced-motion）═══
+   ⚠️ 必須是本檔最後一段。media query 不提升特異度，這些 (0,1,0) 的覆寫全靠原始碼順序取勝；
+   原本放在檔案上方（第 97 行附近），而所有 transition 宣告都在它後面 → transition 那半從來沒生效過，
+   只有 animation 那半有效（.anim-* 剛好定義在它前面）。
+   保留按下態的最終外觀（陰影／縮放的終點）——那是操作回饋不是裝飾動態，只是不再過渡。
+   新增任何帶 transition/animation 的類別時，記得補進下面的選擇器清單。 */
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade,
+  .anim-pop,
+  .anim-slide-down,
+  .anim-slide-up {
+    animation: none;
+  }
+  .pg-hbtn,
+  .oc-card,
+  .oc-chev,
+  .oc-sb,
+  .oc-cta,
+  .fp-tb,
+  .btn-key {
+    transition: none;
+  }
+}

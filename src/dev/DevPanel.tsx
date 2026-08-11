@@ -18,24 +18,9 @@ interface Props {
   upcomingCount: number
   earlyEligible: boolean
   onToggleEarly: () => void
-  farmers: { id: number; farm: string }[]
-  currentFarmerId: number
-  onChangeFarmer: (id: number) => void
-  onHide: () => void
 }
 
-export default function DevPanel({
-  today,
-  onChange,
-  shippableCount,
-  upcomingCount,
-  earlyEligible,
-  onToggleEarly,
-  farmers,
-  currentFarmerId,
-  onChangeFarmer,
-  onHide,
-}: Props) {
+export default function DevPanel({ today, onChange, shippableCount, upcomingCount, earlyEligible, onToggleEarly }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -43,33 +28,15 @@ export default function DevPanel({
       {open ? (
         <div
           className="w-72 rounded-lg p-3 text-white shadow-lg"
-          style={{ background: '#2B2B26' }}
+          style={{ background: 'var(--c-ink)' }}
         >
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-bold tracking-wide">開發面板</span>
+            <span className="text-sm font-bold tracking-wide">開發面板 · 測試日期</span>
             <button onClick={() => setOpen(false)} className="text-sm text-gray-300" aria-label="收合">
               ✕
             </button>
           </div>
 
-          {/* 切換登入農友（驗證各農友資料，如文旦 7-11／企業匯單） */}
-          <div className="mb-3">
-            <div className="mb-1 text-xs text-gray-400">目前登入農友</div>
-            <select
-              value={currentFarmerId}
-              onChange={(e) => onChangeFarmer(Number(e.target.value))}
-              className="w-full rounded px-2 py-1 text-base text-ink"
-              style={{ background: '#fff' }}
-            >
-              {farmers.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.id}. {f.farm}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mb-1 text-xs text-gray-400">測試日期</div>
           <input
             type="date"
             value={today}
@@ -108,29 +75,17 @@ export default function DevPanel({
             <button
               onClick={onToggleEarly}
               className="w-full rounded py-1.5 text-sm font-bold"
-              style={{ background: earlyEligible ? '#1F6E43' : '#6b6b5f', color: '#fff' }}
+              style={{ background: earlyEligible ? 'var(--c-act)' : 'var(--c-ink-faint)', color: '#fff' }}
             >
               提早出貨資格：{earlyEligible ? '有' : '無'}（點擊切換）
             </button>
           </div>
-
-          <div className="mt-2">
-            <button
-              onClick={onHide}
-              className="w-full rounded py-1.5 text-sm font-bold"
-              style={{ background: '#6b6b5f', color: '#fff' }}
-            >
-              🙈 隱藏面板（截圖用）
-            </button>
-            <div className="mt-1 text-xs text-gray-400">要再打開：鍵盤按 Alt + D</div>
-          </div>
-
         </div>
       ) : (
         <button
           onClick={() => setOpen(true)}
           className="rounded-lg px-3 py-2 text-sm font-bold text-white shadow-lg"
-          style={{ background: '#2B2B26' }}
+          style={{ background: 'var(--c-ink)' }}
         >
           開發面板
         </button>
