@@ -9,6 +9,32 @@ const STATUS_TAG: Record<Farmer['status'], string> = {
   已停用: 'is-danger',
 }
 
+// 單選 segmented 按鈕群（選中＝primary 實心、其餘 default）；options 第一個通常是「全部」
+function SegGroup({
+  value,
+  onChange,
+  options,
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string }[]
+}) {
+  return (
+    <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+      {options.map((o) => (
+        <button
+          key={o.value}
+          onClick={() => onChange(o.value)}
+          className={value === o.value ? 'gox-btn gox-btn-primary' : 'gox-btn gox-btn-default'}
+          style={{ padding: '4px 14px', fontSize: 13 }}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export default function Accounts() {
   const { farmers, setAccountStatus, setEarlyShip, setRemoteAgent } = useStore()
   const [detail, setDetail] = useState<Farmer | null>(null)
@@ -19,6 +45,21 @@ export default function Accounts() {
   const [pwd2, setPwd2] = useState('')
   const [pwdErr, setPwdErr] = useState('')
   const [msg, setMsg] = useState('')
+
+  // 篩選：文字搜尋（名稱 / 手機 / 品牌）、狀態（預設已開通）、提早出貨
+  const [q, setQ] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | Farmer['status']>('已開通')
+  const [earlyFilter, setEarlyFilter] = useState<'all' | 'yes' | 'no'>('all')
+
+  const filtered = farmers.filter((f) => {
+    if (statusFilter !== 'all' && f.status !== statusFilter) return false
+    if (earlyFilter === 'yes' && !f.earlyShipAllowed) return false
+    if (earlyFilter === 'no' && f.earlyShipAllowed) return false
+    const kw = q.trim().toLowerCase()
+    if (kw && !`${f.farm} ${f.phone} ${f.brand ?? ''}`.toLowerCase().includes(kw)) return false
+    return true
+  })
+  const isFiltered = filtered.length !== farmers.length
 
   const flash = (m: string) => {
     setMsg(m)
@@ -76,8 +117,48 @@ export default function Accounts() {
     <AdminLayout title="農友帳號管理">
       <div className="gox-list-head">
         <h2 style={{ margin: 0, fontSize: 18 }}>
-          農友帳號管理 <span style={{ color: 'var(--gox-text-muted)', fontSize: 14, fontWeight: 400 }}>共 {farmers.length} 筆</span>
+          農友帳號管理 <span style={{ color: 'var(--gox-text-muted)', fontSize: 14, fontWeight: 400 }}>共 {filtered.length} 筆{isFiltered ? ` / 全部 ${farmers.length}` : ''}</span>
         </h2>
+      </div>
+
+      {/* 篩選：搜尋 + 狀態 + 提早出貨 同一排（狀態/提早出貨為單選 segmented；即時生效） */}
+      <div className="gox-card" style={{ marginBottom: 12 }}>
+        <div className="gox-card-body">
+          <div className="gox-form-row" style={{ marginBottom: 0, gap: 16 }}>
+            <input
+              className="gox-input"
+              style={{ flex: '0 1 220px', minWidth: 150 }}
+              placeholder="搜尋 農場名稱 / 手機"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: 'var(--gox-text-sub)', fontSize: 13, whiteSpace: 'nowrap' }}>狀態</span>
+              <SegGroup
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(v as 'all' | Farmer['status'])}
+                options={[
+                  { value: 'all', label: '全部' },
+                  { value: '已開通', label: '已開通' },
+                  { value: '未開通', label: '未開通' },
+                  { value: '已停用', label: '已停用' },
+                ]}
+              />
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: 'var(--gox-text-sub)', fontSize: 13, whiteSpace: 'nowrap' }}>提早出貨</span>
+              <SegGroup
+                value={earlyFilter}
+                onChange={(v) => setEarlyFilter(v as 'all' | 'yes' | 'no')}
+                options={[
+                  { value: 'all', label: '全部' },
+                  { value: 'yes', label: '可提早' },
+                  { value: 'no', label: '不可提早' },
+                ]}
+              />
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* 頂部置中小彈窗（antd message 風格），自動消失 */}
@@ -113,7 +194,10 @@ export default function Accounts() {
               </tr>
             </thead>
             <tbody>
-              {farmers.map((f) => (
+              {filtered.length === 0 && (
+                <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--gox-text-muted)', padding: 24 }}>無符合條件的農友</td></tr>
+              )}
+              {filtered.map((f) => (
                 <tr key={f.id}>
                   <td>{f.farm}</td>
                   <td>{f.phone}</td>

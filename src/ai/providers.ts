@@ -14,7 +14,7 @@ export const PROVIDER_LABEL: Record<Provider, string> = {
 // 各家預設模型（皆可在頁面上改）：優先免費／低成本，對齊 F3「量大、壓成本」
 export const DEFAULT_MODELS: Record<Provider, string> = {
   gemini: 'gemini-flash-latest', // 別名，自動指向當前 flash（2.0-flash 已退役、2.5-flash 對新帳號封鎖）
-  openai: 'gpt-4o-mini',
+  openai: 'gpt-5.4-mini', // 對齊 production farmer-portal（OpenAiOptions.Model；經 eval 選定）
   anthropic: 'claude-haiku-4-5-20251001',
 }
 
@@ -111,12 +111,58 @@ async function callGemini(cfg: AiConfig, system: string, user: string): Promise<
   return { text, usage, body }
 }
 
+// OpenAI Structured Outputs schema（strict）：逐字對齊 production OpenAiJudgementClient.ResponseSchema。
+// 所有欄位 required、additionalProperties=false；可空欄用 ["string","null"]。
+const OPENAI_RESPONSE_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['results'],
+  properties: {
+    results: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'orderId',
+          'farmerRemark',
+          'driverRemark',
+          'blockedDates',
+          'blockedWeekdays',
+          'forcedShipDate',
+          'earliestShipDate',
+          'latestShipDate',
+          'confidence',
+          'needsHuman',
+          'reason',
+        ],
+        properties: {
+          orderId: { type: 'integer' },
+          farmerRemark: { type: ['string', 'null'] },
+          driverRemark: { type: ['string', 'null'] },
+          blockedDates: { type: 'array', items: { type: 'string' } },
+          blockedWeekdays: { type: 'array', items: { type: 'integer' } },
+          forcedShipDate: { type: ['string', 'null'] },
+          earliestShipDate: { type: ['string', 'null'] },
+          latestShipDate: { type: ['string', 'null'] },
+          confidence: { type: 'number' },
+          needsHuman: { type: 'boolean' },
+          reason: { type: ['string', 'null'] },
+        },
+      },
+    },
+  },
+}
+
 async function callOpenAI(cfg: AiConfig, system: string, user: string): Promise<RawCall> {
   const model = cfg.models.openai
   const body = {
     model,
     temperature: cfg.temperature,
-    response_format: { type: 'json_object' },
+    response_format: {
+      type: 'json_schema',
+      json_schema: { name: 'shipment_judgement', strict: true, schema: OPENAI_RESPONSE_SCHEMA },
+    },
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user },
@@ -129,9 +175,22 @@ async function callOpenAI(cfg: AiConfig, system: string, user: string): Promise<
   })
   const data = await res.json()
   if (!res.ok) throw apiError(data, res.status, body)
-  const text: string = data?.choices?.[0]?.message?.content ?? ''
+  const choice = data?.choices?.[0]
+  const text: string = choice?.message?.content ?? ''
   const u = data?.usage
   const usage = u ? `prompt ${u.prompt_tokens} / output ${u.completion_tokens} tokens` : undefined
+  // 空 content：多半是推理模型（gpt-5 系列）把輸出額度用在推理、或被截斷 → 講清楚原因，別只丟 parse 失敗
+  if (!text.trim()) {
+    const rt = u?.completion_tokens_details?.reasoning_tokens
+    const err = new Error(
+      `OpenAI 回應 content 為空（finish_reason=${choice?.finish_reason ?? '?'}` +
+        (rt != null ? `、reasoning_tokens=${rt}` : '') +
+        (choice?.message?.refusal ? `、refusal=${choice.message.refusal}` : '') +
+        '）——可能被推理 token 吃光或內容被截斷。'
+    ) as Error & { requestBody?: string }
+    err.requestBody = JSON.stringify(body, null, 2)
+    throw err
+  }
   return { text, usage, body }
 }
 

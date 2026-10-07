@@ -14,7 +14,7 @@ export interface Template {
   data: MasterInput
 }
 
-export const TEMPLATE_GROUPS = ['基本情境', '口語特殊情境', '多品項壓測', '企業送禮（匯單）', '極端 noise'] as const
+export const TEMPLATE_GROUPS = ['基本情境', '平移情境', '口語特殊情境', '條件組合', '多品項壓測', '企業送禮（匯單）', '極端 noise'] as const
 
 // 產一張單品項母單的小工具（口語/ noise 情境多為單子單）
 let _seq = 90000
@@ -211,11 +211,11 @@ export const TEMPLATES: Template[] = [
     data: one("麻煩6/10這天『出』喔，是出貨不是到貨，不要又提早", { orderDate: '2026-06-05', window: ['06/05', '06/18'] }),
   },
   {
-    key: 'dialect',
+    key: 'english',
     group: '口語特殊情境',
-    label: '台語注音錯字',
-    hint: '「麥賣ㄊㄞˋ早寄，拜五ㄟ工收」＝不要太早寄、週五才能收 → blockedDates 週五前',
-    data: one('麥賣ㄊㄞˋ早寄啦，等我拜五休假ㄟ工收，感謝啦', { orderDate: '2026-06-08', product: '荔枝季【玉荷包荔枝】鐵人夫婦 1盒(5斤裝)', farm: '鐵人果園', spec: '1盒(5斤裝)', temp: '冷藏', window: ['06/08', '06/21'] }),
+    label: '英文備註（星期+平移）',
+    hint: '英文「不要太早寄、只週五收、6/25後再出」→ blockedWeekdays留週五 + 平移(預設區間全在6/25前)',
+    data: one("Please don't ship it too early. I can only receive it on Friday, my day off, and please don't send it out until after June 25th. Thanks!", { orderDate: '2026-06-08', product: '荔枝季【玉荷包荔枝】鐵人夫婦 1盒(5斤裝)', farm: '鐵人果園', spec: '1盒(5斤裝)', temp: '冷藏', window: ['06/08', '06/21'] }),
   },
   {
     key: 'delivery-only',
@@ -352,6 +352,121 @@ export const TEMPLATES: Template[] = [
     label: 'noise：只寫電話',
     hint: '「0912345678」→ 只有號碼無指示 → driverRemark 聯絡 或 needsHuman',
     data: one('0912345678', { orderDate: '2026-06-15', window: W }),
+  },
+
+  // ── 平移情境（必須整段後移；shipWindow 會變、blockedDates 仍記被擋日） ──
+  {
+    key: 'shift-blocked',
+    group: '平移情境',
+    label: '整段被擋→平移一次',
+    hint: '「6/16-6/29出國都收不到，七月再出」→ blockedDates 蓋滿整段→shiftSteps=1 平移到 06/30–07/13（blockedDates 仍記 06/16–06/29）',
+    data: one('6/16到6/29這段我出國都收不到，麻煩七月以後再出', { orderDate: '2026-06-15', window: ['06/16', '06/29'] }),
+  },
+  {
+    key: 'shift-forced-out',
+    group: '平移情境',
+    label: '指定某日在區間外→平移涵蓋',
+    hint: '「指定7/6出貨」但預設 06/16–06/29 不含→shiftSteps=1 平移到含 7/6 的區間（forcedShipDate=07/06）',
+    data: one('指定7/6出貨', { orderDate: '2026-06-15', window: ['06/16', '06/29'] }),
+  },
+  {
+    key: 'shift-far',
+    group: '平移情境',
+    label: '指定超久之後（低信心）',
+    hint: '芭樂(季節性弱)預設6月、客人「指定9/14出貨」離預設超過一個月→仍平移涵蓋但壓低信心請人工複核',
+    data: one('不急，這批指定9/14出貨就好', { orderDate: '2026-06-15', product: '珍珠芭樂', farm: '阿明芭樂園', spec: '1盒(中果5斤裝)', temp: '常溫', window: ['06/16', '06/29'] }),
+  },
+  {
+    key: 'forced-before-season',
+    group: '平移情境',
+    label: '指定早於產季（無法提早→人工）',
+    hint: '文旦最早8月出貨，客人「7月底前一定要到」→ 早於產季、系統只能後移不能提早→衝突、needsHuman',
+    data: one('文旦想在7月底以前收到，送禮要用拜託了', { orderDate: '2026-07-01', window: ['08/01', '08/14'] }),
+  },
+
+  // ── 條件組合／口語進階（多規則同時、或口語推敲） ──
+  {
+    key: 'combo-date-weekday',
+    group: '條件組合',
+    label: '日期+星期同時（週一到四可收）',
+    hint: '「6/18、6/25不在＋只週一到四收」→ blockedDates 兩單日 + blockedWeekdays[5,6,7] 同時出現',
+    data: one('6/18跟6/25那兩天我剛好不在收不到，而且我只有週一到週四方便收貨，配合一下～', { orderDate: '2026-06-15', window: ['06/16', '06/29'] }),
+  },
+  {
+    key: 'conflict-hard',
+    group: '條件組合',
+    label: '指定日撞不可收貨日（衝突→人工）',
+    hint: '「6/20一定到＋6/19-6/21出國」→ 指定日落在自己說的不在期間、自相矛盾→低信心/needsHuman',
+    data: one('6/20那天一定要送到喔非常重要！！對了我6/19到6/21出國不在台灣', { orderDate: '2026-06-15', window: ['06/16', '06/29'] }),
+  },
+  {
+    key: 'two-dates-fallback',
+    group: '條件組合',
+    label: '兩日期·首選不合理採備選',
+    hint: '「最好6/10前到(早於出貨區間、不可行)，不然6/20出也行」→ 採合理的備選 6/20',
+    data: one('最好6/10前就能收到啦，如果真的來不及，那6/20出貨也可以', { orderDate: '2026-06-15', window: ['06/16', '06/29'] }),
+  },
+  {
+    key: 'ship-means-receive',
+    group: '條件組合',
+    label: '說出貨其實指收貨（週三不可收）',
+    hint: '「禮拜三不要出貨、公司沒人收貨」→ 語意其實是週三不可收；週三收=週二出→blockedWeekdays[2]',
+    data: one('禮拜三那天拜託不要出貨喔，我們公司禮拜三沒人上班、收不到貨', { orderDate: '2026-06-15', window: ['06/16', '06/29'] }),
+  },
+  {
+    key: 'selective-dispatch',
+    group: '條件組合',
+    label: '多品項只講一個·其他照舊',
+    hint: '「荔枝6/25後再寄，其他照舊」→ 只荔枝子單套下限，芒果/文旦維持預設、不被波及',
+    data: {
+      masterOrderId: 33002,
+      masterOrderNo: '26061590301',
+      orderDate: '2026-06-15',
+      rawRemark: '荔枝那箱慢一點，6/25以後再寄就好，其他的照舊不用改喔',
+      carrierLeadDays: 1,
+      items: [
+        { orderId: 89201, subOrderNo: '260615903010', farm: '鐵人果園', productName: '荔枝季【玉荷包荔枝】鐵人夫婦', spec: '1盒(5斤裝)', qty: 1, tempLayer: '冷藏', defaultShipWindow: ['06/16', '06/29'] },
+        { orderId: 89202, subOrderNo: '260615903020', farm: '冬陽芒果農場', productName: '芒果季【愛文芒果】冬陽農場', spec: '1盒(精品大果)', qty: 1, tempLayer: '冷藏', defaultShipWindow: ['06/16', '06/29'] },
+        { orderId: 89203, subOrderNo: '260615903030', farm: '冠軍文旦園', productName: '中秋嚴選【麻豆文旦】冠軍文旦園', spec: '1箱(9台斤)', qty: 1, tempLayer: '常溫', defaultShipWindow: ['09/01', '09/14'] },
+      ],
+    },
+  },
+
+  // ── 平移情境（8/20 軸；預設區間 08/14–08/27、珍珠芭樂） ──
+  {
+    key: 'aug-around',
+    group: '平移情境',
+    label: '約略日期（8/20左右）',
+    hint: '「8/20左右出貨、不用太準」→ 左右/不用太準屬模糊、不設硬日期、低信心',
+    data: one('8/20左右出貨就好，不用太準', { orderDate: '2026-08-10', product: '珍珠芭樂', farm: '阿明芭樂園', spec: '1盒(中果5斤裝)', temp: '常溫', window: ['08/14', '08/27'] }),
+  },
+  {
+    key: 'aug-earliest',
+    group: '平移情境',
+    label: '下限在窗內（8/20後出）',
+    hint: '「8/20以後再出貨」→ earliestShipDate 08/20、滑動保長度 → 08/20–09/02',
+    data: one('8/20以後再出貨', { orderDate: '2026-08-10', product: '珍珠芭樂', farm: '阿明芭樂園', spec: '1盒(中果5斤裝)', temp: '常溫', window: ['08/14', '08/27'] }),
+  },
+  {
+    key: 'aug-latest',
+    group: '平移情境',
+    label: '到貨期限（8/20前要到）',
+    hint: '「8/20以前一定要收到」→ latestShipDate = 8/20−1 = 08/19、夾迄日 → 08/14–08/19',
+    data: one('8/20以前一定要收到喔', { orderDate: '2026-08-10', product: '珍珠芭樂', farm: '阿明芭樂園', spec: '1盒(中果5斤裝)', temp: '常溫', window: ['08/14', '08/27'] }),
+  },
+  {
+    key: 'aug-window',
+    group: '平移情境',
+    label: '限定窗（8/18~8/22之間出）',
+    hint: '「只能8/18到8/22之間出」→ blockedDates 兩段擋窗外 → 只 08/18–08/22 可出',
+    data: one('只能8/18到8/22之間出貨', { orderDate: '2026-08-10', product: '珍珠芭樂', farm: '阿明芭樂園', spec: '1盒(中果5斤裝)', temp: '常溫', window: ['08/14', '08/27'] }),
+  },
+  {
+    key: 'aug-arrival-earliest',
+    group: '平移情境',
+    label: '到貨側下限（8/20才回國）',
+    hint: '「8/20才回國、最快8/20才能收」→ earliestShipDate = 8/20−1 = 08/19 → 08/19–09/01',
+    data: one('我8/20才回國，最快8/20才能收', { orderDate: '2026-08-10', product: '珍珠芭樂', farm: '阿明芭樂園', spec: '1盒(中果5斤裝)', temp: '常溫', window: ['08/14', '08/27'] }),
   },
 ]
 

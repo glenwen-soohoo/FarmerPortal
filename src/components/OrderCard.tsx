@@ -159,6 +159,23 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
                   農友要做的動作是把那張已貼上／已印出的黑貓單撕掉作廢，講清楚是哪張紙才不會撕錯。 */}
               {order.printedAt ? '此單已取消，請撕掉已印出的黑貓出貨單' : '此單已取消，無需出貨'}
             </div>
+            {/* 已取消也要看得到收件人與物流編號：請撕單時靠這兩樣認出要撕的是哪一張（不劃刪除線，要讀得到） */}
+            <div className="oc-l2 mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span className="oc-k text-ink-faint">收件人</span>
+              <span className="oc-win text-ink">{order.recipient}</span>
+            </div>
+            <div className="oc-l2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span className="oc-k text-ink-faint">物流編號</span>
+              {order.trackingNos?.length ? (
+                <span className="inline-flex flex-col gap-y-0.5">
+                  {order.trackingNos.map((no) => (
+                    <OrderNo key={no} value={no} className="oc-win" />
+                  ))}
+                </span>
+              ) : (
+                <span className="oc-win font-normal text-ink-faint/60">尚無單號</span>
+              )}
+            </div>
           </div>
           {/* .oc-sb ＝ 卡內次要動作鈕（膠囊、0.86em、min-height 地板），與展開區的重印／補單同一階 */}
           <button
@@ -236,6 +253,11 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               <span className="oc-k text-ink-faint">預計出貨</span>
               {/* 中性而非品牌綠：綠色留給「可以按的東西」。日期是資訊，一列出現兩次綠會稀釋按鈕的訊號 */}
               <span className="oc-win text-ink">{shipWindowText(order.shipWindow)}</span>
+              {/* 收件人姓名接在出貨日右側、隔一點距離（pl-4），不推到最右；詳細電話/地址仍在展開區 */}
+              <span className="flex items-baseline gap-x-2 pl-4">
+                <span className="oc-k text-ink-faint">收件人</span>
+                <span className="oc-win font-bold text-ink">{order.recipient}</span>
+              </span>
             </div>
           )}
 
@@ -434,11 +456,9 @@ export default function OrderCard({ order, upcoming, selectable, selected, onTog
               </div>
             </div>
             <div>
-              <div className="oc-det-k">收件人 / 電話</div>
-              <div className="oc-det-v font-bold text-ink">
-                {order.recipient}
-                <span className="ml-2 font-normal text-ink-sub">{order.phone}</span>
-              </div>
+              {/* 收件人姓名已移到「預計出貨」同排；展開區這欄只留電話 */}
+              <div className="oc-det-k">電話</div>
+              <div className="oc-det-v font-bold text-ink">{order.phone}</div>
             </div>
             {/* 溫層不在展開區重複顯示：品名區（.pg-gh）已有溫層標籤。 */}
             {/* 收件地址與配送提醒併成同一列（原本各自 oc-det-w 佔滿整寬、多吃一列）。

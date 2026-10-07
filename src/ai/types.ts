@@ -11,6 +11,9 @@ export interface MasterItem {
   qty: number
   tempLayer: string // 常溫 / 冷藏 / 冷凍
   defaultShipWindow: [string, string] // [起, 迄] MM/DD
+  // 送 AI 前由系統把 defaultShipWindow 逐日展開、標星期與是否不收件（如 "08/01(六,不收件)"）；
+  // 讓 AI 查表判斷曆法、不自己算。編輯範本時不必填，送出時自動補。
+  shipWindowDays?: string[]
 }
 
 // 母單輸入（一張母單一個 AI 請求，§3-2）
@@ -23,20 +26,20 @@ export interface MasterInput {
   items: MasterItem[]
 }
 
-// AI 逐子單輸出（§3-3；shipWindow 平移決策併入 AI，見 F2 §2-5）
+// AI 逐子單輸出：逐字對齊 production AiJudgementResult（三個日期欄分工、無 shiftSteps/shipWindow；區間由後端 F2 算）
 export interface JudgeItem {
   orderId: number
   subOrderNo?: string
-  farmerRemark: string
-  driverRemark: string
+  farmerRemark: string | null
+  driverRemark: string | null
   blockedDates: string[]
-  forcedShipDate: string | null
-  // 出貨區間平移：AI 依備註決定「要不要平移、平移幾步」，系統執行固定長度後移
-  shiftSteps: number // 0 = 不平移；1 = 整段後移一個區間長度；2 = 兩個…（F2 §2-5）
-  shipWindow: [string, string] // 平移後的可出貨區間 [起, 迄]（MM/DD）
+  blockedWeekdays: number[] // 週期性不出貨星期（ISO：1=一…7=日）；星期規則用這個、不枚舉日期
+  forcedShipDate: string | null // 指定「就那一天」出貨
+  earliestShipDate: string | null // 下限（X 之後才出）
+  latestShipDate: string | null // 上限（到貨期限反推的最晚出貨日）
   confidence: number
   needsHuman: boolean
-  reason: string
+  reason: string | null
 }
 export interface JudgeResponse {
   results: JudgeItem[]

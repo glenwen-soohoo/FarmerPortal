@@ -10,10 +10,14 @@ const PROMPT_MODES: PromptMode[] = ['general', 'enterprise']
 // 企業送禮（匯單）範本 → 走企業匯單 prompt（F11 §4）；其餘 → 一般 prompt（F3 §3-4）
 const modeOfGroup = (group: string): PromptMode => (group === '企業送禮（匯單）' ? 'enterprise' : 'general')
 import { useAiConfig } from '../ai/config'
-import { fetchHolidays, holidayPromptBlock, type HolidayData } from '../ai/holidays'
+import { fetchHolidays, expandShipWindow, type HolidayData } from '../ai/holidays'
 
 const PROVIDERS: Provider[] = ['gemini', 'openai', 'anthropic']
 const TEMPS: string[] = ['常溫', '冷藏', '冷凍']
+
+// ISO 星期（1=一…7=日）→ 可讀
+const ISO_DOW = ['', '一', '二', '三', '四', '五', '六', '日']
+const weekdayLabel = (arr?: number[]) => (arr?.length ? arr.map((n) => '週' + (ISO_DOW[n] ?? n)).join('、') : '')
 
 // 信心 → 判定狀態映射（F3 §3-5）
 function mapJudge(needsHuman: boolean, confidence: number, threshold: number) {
@@ -77,8 +81,26 @@ export default function AiLab() {
   const provider = cfg.provider
   const hasKey = !!cfg.apiKeys[provider]?.trim()
   const year = Number(master.orderDate.slice(0, 4)) || 2026
-  // 這次判定實際要不要附上假日表
-  const activeHolidayBlock = holidays && useHolidays ? holidayPromptBlock(holidays) : undefined
+  // 送 AI 前建 production 形狀的請求 payload：item 不帶 spec（對齊 AiJudgementItem）、補 shipWindowDays（逐日展開標星期/不收件）
+  const holidaySet = new Set(useHolidays && holidays ? holidays.nationalHolidays.map((h) => h.date) : [])
+  const requestPayload = {
+    masterOrderId: master.masterOrderId,
+    masterOrderNo: master.masterOrderNo,
+    orderDate: master.orderDate,
+    rawRemark: master.rawRemark,
+    carrierLeadDays: master.carrierLeadDays,
+    items: master.items.map((it) => ({
+      orderId: it.orderId,
+      subOrderNo: it.subOrderNo,
+      farm: it.farm,
+      productName: it.productName,
+      qty: it.qty,
+      tempLayer: it.tempLayer,
+      defaultShipWindow: it.defaultShipWindow,
+      shipWindowDays: expandShipWindow(it.defaultShipWindow, year, holidaySet),
+    })),
+  }
+  const userContent = buildUserContent(requestPayload)
 
   // 切判定路徑：載入該路徑的預設 prompt（會覆蓋當前 system 文字）
   const switchMode = (mode: PromptMode) => {
@@ -116,7 +138,7 @@ export default function AiLab() {
   const run = async () => {
     setLoading(true)
     setResult(null)
-    const r = await callAI(cfg, system, buildUserContent(master, activeHolidayBlock))
+    const r = await callAI(cfg, system, userContent)
     setResult(r)
     setLoading(false)
   }
@@ -210,7 +232,7 @@ export default function AiLab() {
               {holidays && (
                 <label className="flex items-center gap-2 text-sm text-ink">
                   <input type="checkbox" checked={useHolidays} onChange={(e) => setUseHolidays(e.target.checked)} />
-                  判定時帶入（{holidays.nationalHolidays.length} 個國定假日；另 {holidays.weekendCount} 個六日不逐列）
+                  把國定假日標入 shipWindowDays（{holidays.nationalHolidays.length} 個國定假日；六日一律標不收件）
                 </label>
               )}
               {holidayErr && <span className="text-sm text-danger">載入失敗：{holidayErr}</span>}
@@ -305,14 +327,14 @@ export default function AiLab() {
         </div>
 
         {/* 結果 */}
-        {result && <ResultView result={result} master={master} system={system} threshold={cfg.confidenceThreshold} holidayBlock={activeHolidayBlock} />}
+        {result && <ResultView result={result} master={master} system={system} threshold={cfg.confidenceThreshold} userContent={userContent} />}
       </div>
     </div>
   )
 }
 
 // ── 結果檢視 ───────────────────────────────────────────────
-function ResultView({ result, master, system, threshold, holidayBlock }: { result: CallResult; master: MasterInput; system: string; threshold: number; holidayBlock?: string }) {
+function ResultView({ result, master, system, threshold, userContent }: { result: CallResult; master: MasterInput; system: string; threshold: number; userContent: string }) {
   const itemOf = (orderId: number) => master.items.find((it) => it.orderId === orderId)
   const resultIds = new Set(result.parsed?.results.map((r) => r.orderId) ?? [])
   const missing = master.items.filter((it) => !resultIds.has(it.orderId))
@@ -348,20 +370,21 @@ function ResultView({ result, master, system, threshold, holidayBlock }: { resul
                     {j.label} · {r.confidence}
                   </span>
                 </div>
-                {/* 出貨區間（AI 決定要不要平移 → 系統執行固定長度後移，F2 §2-5） */}
-                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-mutedbg px-3 py-2 text-sm">
-                  <span className="text-xs font-medium text-ink2">出貨區間 shipWindow：</span>
-                  <span className="font-bold text-ink">{r.shipWindow ? `${r.shipWindow[0]} – ${r.shipWindow[1]}` : '—'}</span>
-                  {(r.shiftSteps ?? 0) > 0 && (
-                    <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ color: '#9A4A0E', background: '#FBE9D9' }}>已平移 {r.shiftSteps} 步</span>
-                  )}
-                  {it && <span className="text-muted">預設 {it.defaultShipWindow[0]}–{it.defaultShipWindow[1]}</span>}
-                </div>
+                {/* 預設出貨區間（僅顯示；實際區間由後端 F2 依三個日期欄算，故不列 shipWindow） */}
+                {it && (
+                  <div className="mb-3 rounded-lg bg-mutedbg px-3 py-2 text-sm">
+                    <span className="text-xs font-medium text-ink2">預設出貨區間 defaultShipWindow：</span>
+                    <span className="text-ink">{it.defaultShipWindow[0]} – {it.defaultShipWindow[1]}</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                  <ResultRow label="指定出貨日 forcedShipDate" value={r.forcedShipDate} />
+                  <ResultRow label="最早出貨日 earliestShipDate" value={r.earliestShipDate} />
+                  <ResultRow label="最晚出貨日 latestShipDate" value={r.latestShipDate} />
+                  <ResultRow label="不可出貨日 blockedDates" value={r.blockedDates?.length ? r.blockedDates.join('、') : ''} />
+                  <ResultRow label="不出貨星期 blockedWeekdays" value={weekdayLabel(r.blockedWeekdays)} />
                   <ResultRow label="給農友 farmerRemark" value={r.farmerRemark} />
                   <ResultRow label="給司機 driverRemark" value={r.driverRemark} />
-                  <ResultRow label="不可出貨日 blockedDates" value={r.blockedDates?.length ? r.blockedDates.join('、') : ''} />
-                  <ResultRow label="指定出貨日 forcedShipDate" value={r.forcedShipDate || ''} />
                 </div>
                 <div className="mt-2 border-t border-line pt-2 text-sm">
                   <span className="text-xs font-medium text-ink2">理由 reason：</span>
@@ -390,8 +413,8 @@ function ResultView({ result, master, system, threshold, holidayBlock }: { resul
               <pre className="overflow-x-auto whitespace-pre-wrap break-words text-ink2">{system}</pre>
             </div>
             <div>
-              <div className="mb-1 font-bold text-ink2">User（母單 JSON{holidayBlock ? ' + 國定假日對照' : ''}）</div>
-              <pre className="overflow-x-auto whitespace-pre-wrap break-words text-ink2">{buildUserContent(master, holidayBlock)}</pre>
+              <div className="mb-1 font-bold text-ink2">User（母單請求 JSON，含 shipWindowDays）</div>
+              <pre className="overflow-x-auto whitespace-pre-wrap break-words text-ink2">{userContent}</pre>
             </div>
             {result.requestBody && (
               <div>
@@ -406,7 +429,7 @@ function ResultView({ result, master, system, threshold, holidayBlock }: { resul
   )
 }
 
-function ResultRow({ label, value }: { label: string; value: string }) {
+function ResultRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
       <span className="text-xs font-medium text-ink2">{label}：</span>

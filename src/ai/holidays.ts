@@ -43,6 +43,29 @@ export async function fetchHolidays(year: number): Promise<HolidayData> {
   return { year, nationalHolidays, total: json.data.length, weekendCount }
 }
 
+const DOW = ['日', '一', '二', '三', '四', '五', '六']
+
+// 把 [起,迄] MM/DD 逐日展開成 ["08/01(六,不收件)", "08/02(日,不收件)", "08/03(一)", …]，供 AI 查曆法、不自己算。
+// 不收件 = 週六／週日 或 命中國定假日（holidayMMDD）。年份由母單 orderDate 帶入。
+export function expandShipWindow(window: [string, string], year: number, holidayMMDD: Set<string>): string[] {
+  const [ms, ds] = window[0].split('/').map(Number)
+  const [me, de] = window[1].split('/').map(Number)
+  if (!ms || !ds || !me || !de) return []
+  const start = new Date(year, ms - 1, ds)
+  const end = new Date(year, me - 1, de)
+  const out: string[] = []
+  const cur = new Date(start)
+  for (let guard = 0; cur <= end && guard < 92; guard++) {
+    const mm = String(cur.getMonth() + 1).padStart(2, '0')
+    const dd = String(cur.getDate()).padStart(2, '0')
+    const dow = cur.getDay()
+    const noPickup = dow === 0 || dow === 6 || holidayMMDD.has(`${mm}/${dd}`)
+    out.push(`${mm}/${dd}(${DOW[dow]}${noPickup ? ',不收件' : ''})`)
+    cur.setDate(cur.getDate() + 1)
+  }
+  return out
+}
+
 // 把國定假日整理成餵給 AI 的文字區塊（附在母單 JSON 後）
 export function holidayPromptBlock(h: HolidayData): string {
   const lines = h.nationalHolidays.map((x) => `- ${x.date} ${x.name}`).join('\n')
