@@ -479,17 +479,15 @@ export default function FarmerLayout() {
       {/* 印單等待面板：單筆／批次／企業批次與提示條上的「重試」共用這一份（狀態在 store） */}
       {printBusy && <PrintOverlay title={printBusy.title} detail={printBusy.detail} />}
 
-      {/* 開發面板僅本機 dev 顯示；正式 build 隱藏（真農友不該看到） */}
-      {import.meta.env.DEV && (
-        <DevPanel
-          today={today}
-          onChange={setToday}
-          shippableCount={shippableCount}
-          upcomingCount={upcomingCount}
-          earlyEligible={earlyEligible}
-          onToggleEarly={() => setEarlyEligible((v) => !v)}
-        />
-      )}
+      {/* 開發面板：本 repo 為 demo 站，正式 build（gh-pages）也顯示，供展示時切換測試日／提早出貨等 */}
+      <DevPanel
+        today={today}
+        onChange={setToday}
+        shippableCount={shippableCount}
+        upcomingCount={upcomingCount}
+        earlyEligible={earlyEligible}
+        onToggleEarly={() => setEarlyEligible((v) => !v)}
+      />
     </div>
   )
 }
